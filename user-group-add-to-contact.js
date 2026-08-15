@@ -1,6 +1,6 @@
 (async function() {
   // Configuration
-  const ROW_HEIGHT = 58;          // عرض ریدف عا
+  const ROW_HEIGHT = 58;          //  عرض ریدف عا
   const STEP_DELAY = 1000;        // تاخیر بین هر مرحله از عملیات
   const POLL_MS = 100;            // تاخیر بررسی المنت
 
