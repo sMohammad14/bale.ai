@@ -1,21 +1,21 @@
 (async function() {
   // =====================================================
-  //  تنظیمات تاخیرهای جداگانه برای هر بخش
+  // ⏱️ تنظیمات زمانی قابل تنظیم
   // =====================================================
 
-  // ---------- تاخیرهای ثابت بعد از کلیک‌ها -----------
+  // ---------- تاخیرهای ثابت بعد از کلیک‌ها ----------
 
   // بعد از کلیک روی نام عضو تا باز شدن کامل پروفایل
-  const CLICK_MEMBER_NAME_DELAY = 200;
+  const CLICK_MEMBER_NAME_DELAY = 10;
 
   // بعد از کلیک روی دکمه «بیشتر» تا باز شدن منو
-  const CLICK_MORE_BUTTON_DELAY = 200;
+  const CLICK_MORE_BUTTON_DELAY = 10;
 
   // بعد از کلیک روی «افزودن به مخاطبین» تا باز شدن صفحهٔ ویرایش نام
   const CLICK_ADD_TO_CONTACTS_DELAY = 1000;
 
   // بعد از کلیک روی «ذخیره» تا بسته شدن صفحهٔ ویرایش و بازگشت به پروفایل
-  const CLICK_SAVE_BUTTON_DELAY = 200;
+  const CLICK_SAVE_BUTTON_DELAY = 15000;
 
   // بعد از بستن پنجره/مودال تا بازگشت به لیست اعضا
   const CLOSE_MODAL_DELAY = 200;
@@ -23,7 +23,7 @@
   // بعد از اسکرول به موقعیت تقریبی یک ایندکس نامرئی
   const SCROLL_STEP_DELAY = 200;
 
-  //  فاضله بین بررسی‌های مجدد در حلقه‌های انتظار 
+  // ---------- فاصله بین بررسی‌های مجدد در حلقه‌های انتظار ----------
 
   // در همهٔ توابع انتظار استفاده می‌شود؛ هر چند میلی‌ثانیه وضعیت را چک می‌کنیم.
   const POLL_INTERVAL = 1;
@@ -34,55 +34,69 @@
   const TIMEOUT_INITIAL_MEMBER_LIST = 10000;
 
   // انتظار برای باز شدن و پیدا شدن مودال پروفایل کاربر
-  const TIMEOUT_PROFILE_MODAL = 300;
+  const TIMEOUT_PROFILE_MODAL = 5000;
 
   // انتظار برای پیدا شدن نام کاربر در پروفایل (p.kSqtzD)
-  const TIMEOUT_PROFILE_NAME_P = 500;
+  const TIMEOUT_PROFILE_NAME_P = 2000;
 
   // انتظار برای ظاهر شدن دکمه «بیشتر» در مودال پروفایل
-  const TIMEOUT_MORE_BUTTON = 300;
+  const TIMEOUT_MORE_BUTTON = 5000;
 
   // انتظار برای تشخیص گزینه «ویرایش نام» در منو (یعنی کاربر قبلاً مخاطب است)
-  const TIMEOUT_CHECK_ALREADY_CONTACT = 300;
+  const TIMEOUT_CHECK_ALREADY_CONTACT = 1500;
 
   // انتظار برای تشخیص گزینه «مسدود و حذف کردن» در منو (یعنی ربات است)
-  const TIMEOUT_CHECK_BOT = 300;
+  const TIMEOUT_CHECK_BOT = 50;
 
   // انتظار برای پیدا کردن گزینه «افزودن به مخاطبین» در منو
-  const TIMEOUT_FIND_ADD_OPTION = 300;
+  const TIMEOUT_FIND_ADD_OPTION = 10;
 
   // انتظار برای پیدا کردن دکمه «ذخیره» در صفحهٔ ویرایش نام
-  const TIMEOUT_FIND_SAVE_BUTTON = 300;
+  const TIMEOUT_FIND_SAVE_BUTTON = 10;
 
   // انتظار برای ظاهر شدن دکمه «بیشتر» هنگام تایید نهایی بعد از ذخیره
-  const TIMEOUT_VERIFY_MORE_BUTTON = 300;
+  const TIMEOUT_VERIFY_MORE_BUTTON = 10;
 
   // انتظار برای تایید موفقیت با دیدن «ویرایش نام» در منوی تایید
-  const TIMEOUT_VERIFY_EDIT_NAME = 300;
+  const TIMEOUT_VERIFY_EDIT_NAME = 1500;
 
   // انتظار برای تایید عدم موفقیت با دیدن «افزودن به مخاطبین» در منوی تایید
-  const TIMEOUT_VERIFY_ADD_OPTION = 300;
+  const TIMEOUT_VERIFY_ADD_OPTION = 10;
 
   // حداکثر انتظار برای بسته شدن کامل یک مودال
-  const TIMEOUT_MODAL_CLOSE = 5000;
+  const TIMEOUT_MODAL_CLOSE = 10;
 
   // حداکثر انتظار برای بازگشت به لیست اعضا (دیده شدن دوباره tbody)
-  const TIMEOUT_LIST_RETURN = 4000;
+  const TIMEOUT_LIST_RETURN = 200;
 
   // ارتفاع تقریبی هر ردیف در لیست برای محاسبه اسکرول
   const ROW_HEIGHT = 58;
 
+  // ---------- توقف دوره‌ای پس از افزودن تعداد مشخصی مخاطب ----------
 
+  // بعد از هر چند کاربر اضافه‌شده، توقف کنیم؟
+  const PAUSE_INTERVAL_ADDED = 10000;
+
+  // مدت زمان توقف (به میلی‌ثانیه) پس از رسیدن به تعداد بالا
+  // مثلاً ۵ دقیقه = 300000 میلی‌ثانیه
+  const PAUSE_DURATION_ADDED_MS = 60000;
+
+  // =====================================================
+  // متغیرهای آمار و ردیابی
+  // =====================================================
   let totalChecked = 0;
   let alreadyContacts = 0;
   let addedCount = 0;
   let botSkipped = 0;
   const processedUIDs = new Set();
 
+  // =====================================================
+  // ابزار کمکی
+  // =====================================================
 
   function logStep(stepName, startTime) {
     const duration = Date.now() - startTime;
-    console.log(`${stepName} → ${duration} ms`);
+    console.log(`⏱️ ${stepName} → ${duration} ms`);
   }
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -128,8 +142,6 @@
     }
     throw new Error(`Text "${text}" not found`);
   }
-
-
 
   function getProfileModal() {
     const overlays = Array.from(document.querySelectorAll('.ReactModal__Overlay')).filter(isVisible);
@@ -224,6 +236,9 @@
     return null;
   }
 
+  // =====================================================
+  // آماده‌سازی اولیه
+  // =====================================================
 
   const tbody = await waitForVisibleSelector('tbody[data-testid="virtuoso-item-list"]', TIMEOUT_INITIAL_MEMBER_LIST);
   const container = (function() {
@@ -236,12 +251,14 @@
     return null;
   })();
   if (!container) {
-    console.error('Scroll container not found.');
+    console.error('❌ Scroll container not found.');
     return;
   }
-  console.log('Scroll container:', container.className);
+  console.log('🎯 Scroll container:', container.className);
 
-
+  // =====================================================
+  // پردازش یک ردیف
+  // =====================================================
 
   async function processRow(row, index) {
     const rowStart = Date.now();
@@ -249,25 +266,25 @@
 
     const uid = getUIDFromRow(row);
     const nameText = (row.querySelector('div.ivqFHl')?.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-    console.log(`\n Processing index ${index} | UID: ${uid || 'unknown'} | Name: ${nameText}`);
+    console.log(`\n🔄 Processing index ${index} | UID: ${uid || 'unknown'} | Name: ${nameText}`);
 
     if (uid && processedUIDs.has(uid)) {
-      console.log(`User ${uid} already processed, skipped.`);
+      console.log(`ℹ️ User ${uid} already processed, skipped.`);
       return 'skipped';
     }
 
-
+    // 1) کلیک روی نام عضو
     let stepStart = Date.now();
     const nameDiv = row.querySelector('div.ivqFHl');
     if (!nameDiv) {
-      console.warn(` Name element not found for index ${index}.`);
+      console.warn(`⚠️ Name element not found for index ${index}.`);
       return false;
     }
     nameDiv.click();
     await sleep(CLICK_MEMBER_NAME_DELAY);
     logStep('Click member name', stepStart);
 
-
+    // 2) پیدا کردن مودال پروفایل
     stepStart = Date.now();
     const profileModal = getProfileModal();
     if (!profileModal) {
@@ -276,13 +293,13 @@
     }
     logStep('Find profile modal', stepStart);
 
-
+    // 3) بررسی حساب پاک‌شده
     stepStart = Date.now();
     const nameParagraph = profileModal.querySelector('p.kSqtzD');
     if (nameParagraph) {
       const profileName = nameParagraph.textContent.trim();
       if (profileName === 'Deleted Account' || profileName === 'حساب پاک‌شده') {
-        console.log(' Deleted Account detected in profile, skipping...');
+        console.log('ℹ️ Deleted Account detected in profile, skipping...');
         if (uid) processedUIDs.add(uid);
         await closeCurrentModal(profileModal);
         await waitForVisibleSelector('tbody[data-testid="virtuoso-item-list"]', TIMEOUT_LIST_RETURN);
@@ -292,7 +309,7 @@
     }
     logStep('Check deleted account (not found)', stepStart);
 
-
+    // 4) انتظار برای دکمه بیشتر
     stepStart = Date.now();
     let moreBtn = null;
     while (!moreBtn && (Date.now() - stepStart) < TIMEOUT_MORE_BUTTON) {
@@ -300,49 +317,49 @@
       if (!moreBtn) await sleep(POLL_INTERVAL);
     }
     if (!moreBtn) {
-      console.warn(` More button not found for index ${index}.`);
+      console.warn(`⚠️ More button not found for index ${index}.`);
       if (uid) processedUIDs.add(uid);
       await returnToListAfterClosing(profileModal);
       return false;
     }
     logStep('Wait for more button', stepStart);
 
-
+    // 5) کلیک روی دکمه بیشتر و باز شدن منو
     stepStart = Date.now();
-    console.log(' Clicking more button');
+    console.log('🔘 Clicking more button');
     moreBtn.click();
     await sleep(CLICK_MORE_BUTTON_DELAY);
     logStep('Click more button + delay', stepStart);
 
-
+    // 6) بررسی «ویرایش نام» (کاربر قبلاً مخاطب است)
     stepStart = Date.now();
     try {
       await findVisibleByText('ویرایش نام', TIMEOUT_CHECK_ALREADY_CONTACT);
       alreadyContacts++;
       if (uid) processedUIDs.add(uid);
-      console.log(' User already in contacts, skipped.');
-      document.body.click(); 
+      console.log('ℹ️ User already in contacts, skipped.');
+      document.body.click(); // بستن منو
       await returnToListAfterClosing(profileModal);
       logStep('Check already in contacts', stepStart);
       return 'already';
     } catch (e) {}
     logStep('Check already in contacts (not found)', stepStart);
 
-
+    // 7) بررسی ربات بودن («مسدود و حذف کردن»)
     stepStart = Date.now();
     try {
       await findVisibleByText('مسدود و حذف کردن', TIMEOUT_CHECK_BOT);
       botSkipped++;
       if (uid) processedUIDs.add(uid);
-      console.log(' Bot detected (block and delete option found), skipping...');
-      document.body.click(); 
+      console.log('ℹ️ Bot detected (block and delete option found), skipping...');
+      document.body.click(); // بستن منو
       await returnToListAfterClosing(profileModal);
       logStep('Check bot', stepStart);
       return 'bot';
     } catch (e) {}
     logStep('Check bot (not found)', stepStart);
 
-
+    // 8) کلیک روی «افزودن به مخاطبین»
     stepStart = Date.now();
     let addSpan;
     try {
@@ -351,7 +368,7 @@
       try {
         addSpan = await findVisibleByText('افزودن به مخاطبین', TIMEOUT_FIND_ADD_OPTION);
       } catch (e2) {
-        console.warn(`Add option not found for index ${index}.`);
+        console.warn(`⚠️ Add option not found for index ${index}.`);
         if (uid) processedUIDs.add(uid);
         await returnToListAfterClosing(profileModal);
         return false;
@@ -361,23 +378,23 @@
     await sleep(CLICK_ADD_TO_CONTACTS_DELAY);
     logStep('Click add to contacts', stepStart);
 
-
+    // 9) پیدا کردن و کلیک روی «ذخیره»
     stepStart = Date.now();
     let saveBtn;
     try {
       saveBtn = await findVisibleByTextAndTag('ذخیره', 'button', TIMEOUT_FIND_SAVE_BUTTON);
     } catch (e) {
-      console.warn(`Save button not found for index ${index}.`);
+      console.warn(`⚠️ Save button not found for index ${index}.`);
       if (uid) processedUIDs.add(uid);
       await returnToListAfterClosing(profileModal);
       return false;
     }
     saveBtn.click();
-    console.log('Save clicked, verifying contact status...');
+    console.log('💾 Save clicked, verifying contact status...');
     await sleep(CLICK_SAVE_BUTTON_DELAY);
     logStep('Click save + delay', stepStart);
 
-
+    // 10) تایید نهایی با باز کردن دوباره منو
     stepStart = Date.now();
     let verifyBtn = null;
     while (!verifyBtn && (Date.now() - stepStart) < TIMEOUT_VERIFY_MORE_BUTTON) {
@@ -385,7 +402,7 @@
       if (!verifyBtn) await sleep(POLL_INTERVAL);
     }
     if (!verifyBtn) {
-      console.warn(`Could not find more button to verify status for index ${index}.`);
+      console.warn(`⚠️ Could not find more button to verify status for index ${index}.`);
       if (uid) processedUIDs.add(uid);
       await returnToListAfterClosing(profileModal);
       return false;
@@ -395,14 +412,14 @@
     await sleep(CLICK_MORE_BUTTON_DELAY);
     logStep('Verify: click more button + delay', stepStart);
 
-
+    // 11) بررسی منوی تایید
     stepStart = Date.now();
     try {
       await findVisibleByText('ویرایش نام', TIMEOUT_VERIFY_EDIT_NAME);
-      console.log('Contact added successfully (verified via menu).');
+      console.log('✅ Contact added successfully (verified via menu).');
       if (uid) processedUIDs.add(uid);
       addedCount++;
-      document.body.click(); 
+      document.body.click(); // بستن منو
       await returnToListAfterClosing(profileModal);
       logStep('Verify: added confirmed', stepStart);
       return 'added';
@@ -410,22 +427,25 @@
 
     try {
       await findVisibleByText('افزودن به مخاطبین', TIMEOUT_VERIFY_ADD_OPTION);
-      console.warn('Contact not added (still shows add option).');
-      document.body.click(); 
+      console.warn('⚠️ Contact not added (still shows add option).');
+      document.body.click(); // بستن منو
       await returnToListAfterClosing(profileModal);
       logStep('Verify: not added', stepStart);
       return 'not-added';
     } catch (e) {}
 
-    console.warn('Verification menu unknown state.');
+    console.warn('⚠️ Verification menu unknown state.');
     await returnToListAfterClosing(profileModal);
     logStep('Verify: unknown state', stepStart);
     console.log(`   Row total time: ${Date.now() - rowStart} ms`);
     return false;
   }
 
- 
-  console.log('Starting automatic contact addition (sequential)...');
+  // =====================================================
+  // حلقه اصلی
+  // =====================================================
+
+  console.log('🚀 Starting automatic contact addition (sequential)...');
   console.log('To stop manually, type stopAutomation() in console.');
 
   let stopRequested = false;
@@ -448,9 +468,16 @@
     if (stopRequested) break;
 
     if (result === 'not-added') {
-      console.log(`Retrying same index ${targetIndex}...`);
+      console.log(`   🔁 Retrying same index ${targetIndex}...`);
       await sleep(SCROLL_STEP_DELAY);
       continue;
+    }
+
+    // ⏸️ توقف دوره‌ای پس از رسیدن به تعداد مشخصی مخاطب جدید
+    if (result === 'added' && addedCount > 0 && addedCount % PAUSE_INTERVAL_ADDED === 0) {
+      console.log(`⏸️ Reached ${addedCount} added contacts. Pausing for ${PAUSE_DURATION_ADDED_MS} ms...`);
+      await sleep(PAUSE_DURATION_ADDED_MS);
+      console.log('▶️ Pause finished. Continuing...');
     }
 
     targetIndex++;
@@ -458,15 +485,15 @@
     if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5 && targetIndex > 0) {
       const nextRow = tbody.querySelector(`tr.GUqHyZ[data-index="${targetIndex}"]`);
       if (!nextRow) {
-        console.log(' Reached end of list.');
+        console.log('📌 Reached end of list.');
         break;
       }
     }
   }
 
-  console.log('\n Operation finished.');
-  console.log(` Total checked: ${totalChecked}`);
-  console.log(` Already in contacts: ${alreadyContacts}`);
-  console.log(` Bot skipped: ${botSkipped}`);
-  console.log(` Added to contacts: ${addedCount}`);
+  console.log('\n🎯 Operation finished.');
+  console.log(`📊 Total checked: ${totalChecked}`);
+  console.log(`👥 Already in contacts: ${alreadyContacts}`);
+  console.log(`🤖 Bot skipped: ${botSkipped}`);
+  console.log(`➕ Added to contacts: ${addedCount}`);
 })();
