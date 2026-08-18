@@ -14,16 +14,14 @@
     req.onerror = () => reject(req.error);
   });
 
-  // تبدیل id ها به رشته و ساخت آرایه
   const ids = all.map(record => String(record.id));
 
-  // نمایش آرایه با فرمت JSON
   const output = JSON.stringify(ids);
   console.log(output);
 
-  // کپی در کلیپ‌بورد
   copy(ids);
-  console.log('📋 در کلیپ‌بورد کپی شد.');
+
+  console.log(`Total contacts: ${ids.length}`);
 
   db.close();
 })();
