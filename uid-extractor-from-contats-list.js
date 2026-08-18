@@ -14,10 +14,16 @@
     req.onerror = () => reject(req.error);
   });
 
-  console.log(`تعداد رکوردهای contacts: ${all.length}`);
-  all.forEach((record, i) => {
-    console.log(`\n🔹 رکورد ${i + 1}:`, record);
-  });
+  // تبدیل id ها به رشته و ساخت آرایه
+  const ids = all.map(record => String(record.id));
+
+  // نمایش آرایه با فرمت JSON
+  const output = JSON.stringify(ids);
+  console.log(output);
+
+  // کپی در کلیپ‌بورد
+  copy(ids);
+  console.log('📋 در کلیپ‌بورد کپی شد.');
 
   db.close();
 })();
