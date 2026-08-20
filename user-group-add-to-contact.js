@@ -26,7 +26,7 @@
   // بعد از کلیک روی «ذخیره» تا بسته شدن صفحهٔ ویرایش و بازگشت به پروفایل
   // این مرحله باید منتظر بماند تا عملیات ذخیره روی سرور انجام شود.
   // مثال: "2000-5000" یعنی تاخیر تصادفی بین ۲ تا ۵ ثانیه
-  const CLICK_SAVE_BUTTON_DELAY_RANGE = "1000-2000";
+  const CLICK_SAVE_BUTTON_DELAY_RANGE = "5000-8000";
 
   // بعد از بستن پنجره/مودال تا بازگشت به لیست اعضا
   // این تاخیر برای ناپدید شدن مودال و ظاهر شدن دوباره لیست است.
@@ -129,6 +129,12 @@
   // مثال: 500 یعنی بعد از هر اسکرول ۵۰۰ میلی‌ثانیه صبر می‌کند
   const PRELOAD_WAIT_AFTER_SCROLL_MS = 500;
 
+  // تأخیر تصادفی بعد از هر گام اسکرول پیش‌بارگذاری (بازه‌ای)
+  // اگر حداقل و حداکثر برابر باشند، تاخیر ثابت است.
+  // اگر متفاوت باشند، در هر اجرا یک عدد تصادفی بین آن دو انتخاب می‌شود.
+  // مثال: "500-1000" یعنی هر بار عددی تصادفی بین ۵۰۰ تا ۱۰۰۰ میلی‌ثانیه
+  const PRELOAD_SCROLL_DELAY_RANGE = "200-400";
+
   // اگر این تعداد دفعه پشت‌سرهم ایندکس حداکثر افزایش نیافت، پیش‌بارگذاری متوقف شود
   // مقدار ۵ یعنی بعد از ۵ اسکرول بدون ردیف جدید، فرض می‌کنیم به انتها رسیده‌ایم.
   // مثال: 5 یعنی بعد از ۵ اسکرول بدون افزایش ایندکس، توقف می‌کند
@@ -158,7 +164,7 @@
   // تعداد کل اعضای گروه را اگر دقیق می‌دانید اینجا وارد کنید.
   // اگر 0 باشد، کد خودش با پیش‌بارگذاری لیست حداکثر ایندکس را تشخیص می‌دهد.
   // مثال: برای گروهی با 2000 عضو، این مقدار را 1975 بگذارید (ایندکس‌ها از صفر شروع می‌شوند)
-  const TOTAL_MEMBERS_COUNT = 4180;
+  const TOTAL_MEMBERS_COUNT = 784;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجهٔ not-added
   // اگر بعد از این تعداد تلاش کاربر هنوز اضافه نشد، در لیست ناموفق‌ها ثبت می‌شود.
@@ -279,6 +285,20 @@
       await sleep(POLL_INTERVAL);
     }
     throw new Error(`Text "${text}" not found`);
+  }
+
+  // انتظار برای ظاهر شدن پاراگراف نام در پروفایل (تا timeout مشخص)
+  // در صورت timeout، null برمی‌گرداند
+  async function waitForProfileName(modal, timeout) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      const nameParagraph = modal.querySelector('p.kSqtzD');
+      if (nameParagraph && isVisible(nameParagraph)) {
+        return nameParagraph;
+      }
+      await sleep(POLL_INTERVAL);
+    }
+    return null;
   }
 
   // گرفتن مودال پروفایل کاربر (نه پنجرهٔ گروه)
@@ -443,7 +463,8 @@
 
       // صبر برای بارگذاری ردیف‌های جدید
       // این تاخیر ثابت است و تصادفی نمی‌شود
-      await sleep(PRELOAD_WAIT_AFTER_SCROLL_MS);
+      // >>> تغییر: حالا از بازه تصادفی PRELOAD_SCROLL_DELAY_RANGE استفاده می‌شود
+      await sleep(getDelay(PRELOAD_SCROLL_DELAY_RANGE));
     }
 
     maxKnownIndex = prevMaxIndex;
@@ -563,7 +584,7 @@
 
     // 3) بررسی حساب پاک‌شده
     stepStart = Date.now();
-    const nameParagraph = profileModal.querySelector('p.kSqtzD');
+    const nameParagraph = await waitForProfileName(profileModal, TIMEOUT_PROFILE_NAME_P);
     if (nameParagraph) {
       const profileName = nameParagraph.textContent.trim();
       if (profileName === 'Deleted Account' || profileName === 'حساب پاک‌شده') {
