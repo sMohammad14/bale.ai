@@ -178,7 +178,7 @@
   // تابع کمکی برای دسترسی به لیست از کنسول
   window.getSentUIDs = () => {
     const list = loadSentUIDs();
-    console.log(list);
+    console.log(JSON.stringify(list));
     return list;
   };
 
