@@ -1,63 +1,74 @@
 (async function() {
-  // ---- لایه 0: متغیر سراسری فاصله بررسی (Polling Interval) ----
-  // در تمام توابع انتظار، هر این مقدار میلی‌ثانیه یک‌بار عنصر موردنظر را چک می‌کنیم.
-  // هرچه کمتر باشد، واکنش سریع‌تر اما مصرف CPU بیشتر.
+  // ⏱️ فاصله بررسی المنت‌ها (میلی‌ثانیه)
   const POLL_INTERVAL = 1;
 
-  // ---- حداکثر زمان انتظار برای ظاهر شدن هر عنصر (لایه ۱) ----
+  // ⏱️ حداکثر زمان انتظار برای ظاهر شدن نام مخاطب (میلی‌ثانیه)
+  const TIMEOUT_CONTACT_NAME = 45000;
 
-  // حداکثر انتظار برای ظاهر شدن نام مخاطب بعد از رفتن به صفحه چت
-  const TIMEOUT_CONTACT_NAME = 10000;
+  // ⏱️ حداکثر زمان انتظار برای ظاهر شدن باکس پیام (میلی‌ثانیه)
+  const TIMEOUT_MESSAGE_BOX = 50000;
 
-  // حداکثر انتظار برای ظاهر شدن باکس پیام بعد از رفتن به صفحه مخاطب
-  const TIMEOUT_MESSAGE_BOX = 10000;
-
-  // حداکثر انتظار برای ظاهر شدن دکمه ارسال
+  // ⏱️ حداکثر زمان انتظار برای ظاهر شدن دکمه ارسال (میلی‌ثانیه)
   const TIMEOUT_SEND_BUTTON = 10000;
 
-  // ---- تاخیرهای بازه‌ای بعد از هر اقدام (لایه ۲) ----
-  // قالب: "min-max" (میلی‌ثانیه)
-  // در هر بار اجرا، یک عدد تصادفی بین min و max انتخاب می‌شود.
-  // اگر min و max برابر باشند، دقیقاً همان مقدار صبر می‌کند.
-  // مثال: "1000-3000" یعنی بین ۱ تا ۳ ثانیه تصادفی
-  //       "1000-1000" یعنی دقیقاً ۱ ثانیه
+  // ⏱️ تأخیر بعد از رفتن به صفحه مخاطب (بازه min-max میلی‌ثانیه)
+  const DELAY_AFTER_NAVIGATION_RANGE = "2000-18000";
 
-  // بعد از رفتن به صفحه مخاطب و قبل از استخراج نام (برای اطمینان از لود کامل صفحه)
-  const DELAY_AFTER_NAVIGATION_RANGE = "200-400";
+  // ⏱️ تأخیر قبل از نوشتن متن (بازه min-max میلی‌ثانیه)
+  const DELAY_BEFORE_TYPING_RANGE = "2000-20000";
 
-  // بعد از استخراج نام و قبل از نوشتن متن
-  const DELAY_BEFORE_TYPING_RANGE = "50-100";
+  // ⏱️ تأخیر قبل از کلیک روی ارسال (بازه min-max میلی‌ثانیه)
+  const DELAY_BEFORE_SEND_RANGE = "2000-40000";
 
-  // بعد از نوشتن متن و قبل از کلیک روی ارسال
-  const DELAY_BEFORE_SEND_RANGE = "700-1000";
+  // ⏱️ تأخیر بعد از ارسال (بازه min-max میلی‌ثانیه)
+  const DELAY_AFTER_SEND_RANGE = "2000-53000";
 
-  // بعد از کلیک روی ارسال و قبل از رفتن به مخاطب بعدی
-  const DELAY_AFTER_SEND_RANGE = "700-1000";
+  // ⏱️ تأخیر تصادفی بین تایپ هر کاراکتر (بازه min-max میلی‌ثانیه)
+  const CHAR_TYPING_DELAY_RANGE = "20-80";
 
-  // ---- مکث دوره‌ای پس از تعداد مشخصی ارسال موفق ----
+  // ⏱️ مکث بعد از هر N ارسال موفق
+  const PAUSE_AFTER_N_MESSAGES = 100;
 
-  // بعد از هر چند پیام موفق، مکث کنیم؟ (مثلاً 10 یعنی بعد از هر ۱۰ ارسال موفق)
-  const PAUSE_AFTER_N_MESSAGES = 500;
+  // ⏱️ مدت‌زمان مکث (بازه min-max میلی‌ثانیه)
+  const PAUSE_DURATION_RANGE = "7200000-18000000";
 
-  // بازه زمانی مکث بین y-z میلی‌ثانیه (مثلاً "5000-10000" یعنی ۵ تا ۱۰ ثانیه رندوم)
-  const PAUSE_DURATION_RANGE = "60000-180000";
+  // 🗄️ اطلاعات دیتابیس IndexedDB
+  const INDEXEDDB_NAME = 'db';
+  const INDEXEDDB_STORE_NAME = 'contacts';
 
+  // 💾 کلید localStorage برای ذخیره UIDهای ارسال‌شده
+  const SENT_UID_STORAGE_KEY = 'sentUIDs';
 
-  // لیست UIDها را اینجا پر کنید.
-  // فعلاً خالی است؛ خودتان مقداردهی کنید.
-  const UID_LIST = ["6546","6876","6687"];
+  // ⛔ مجموعه UIDهایی که نباید پیام بگیرند
+  const SKIP_UID_SET = new Set([
+    "-1",
+    "10",
+    "327373"
+  ]);
 
-  // متن پیام با placeholder x
-  // بعداً x با نام مخاطب جایگزین می‌شود.
-  const MESSAGE_TEMPLATE = `سلام x، وقت بخیر
-
-متن پیام با استایل قابل پشتیبانی در بله`;
-
-
+  // قالب‌های پیام – هر بار یکی به‌صورت تصادفی انتخاب می‌شود
+  // توجه: کاراکتر x با نام مخاطب جایگزین می‌شود
+  const MESSAGE_TEMPLATES = [
+    `سلام x نمونه پیام شماره 1`,
+    `سلام x نمونه پیام شماره 2`,
+    `سلام x نمونه پیام شماره 3`,
+    `سلام x نمونه پیام شماره 4`,
+    `سلام x نمونه پیام شماره 5`,
+    `سلام x نمونه پیام شماره 6`,
+    `سلام x نمونه پیام شماره 7`,
+    `سلام x نمونه پیام شماره 8`,
+    `سلام x نمونه پیام شماره 9`,
+    `سلام x نمونه پیام شماره 10`,
+    `سلام x نمونه پیام شماره 11`,
+    `سلام x نمونه پیام شماره 12`,
+    `سلام x نمونه پیام شماره 13`,
+    `سلام x نمونه پیام شماره 14`,
+    `سلام x نمونه پیام شماره 15`
+  ];
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-  // تابع تبدیل بازه "min-max" به عدد تصادفی
+  // تبدیل بازه "min-max" به عدد تصادفی
   function getRandomDelay(rangeStr) {
     const parts = rangeStr.split('-');
     const min = parseInt(parts[0], 10);
@@ -67,42 +78,152 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  // تابع صبر فعال (Polling) با حداکثر زمان مشخص
+  // انتظار فعال تا ظاهر شدن یک المنت
   async function waitForElement(selector, timeout) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
       const el = document.querySelector(selector);
-      if (el && el.offsetParent !== null) {
-        return el;
-      }
+      if (el && el.offsetParent !== null) return el;
       await sleep(POLL_INTERVAL);
     }
     throw new Error(`Timeout waiting for ${selector}`);
   }
 
-  // تابع رفتن به صفحه مخاطب با UID مشخص (بدون رفرش کامل)
+  // رفتن به صفحه چت با UID مشخص بدون رفرش کامل
   function navigateToContact(uid) {
     const url = `https://web.bale.ai/chat?uid=${uid}`;
     history.pushState({}, '', url);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
-  // تابع قرار دادن متن در باکس پیام
+  // تایپ متن کاراکتر به کاراکتر با تأخیر تصادفی
   async function setMessageText(text) {
     const editable = document.querySelector('#editable-message-text');
-    if (!editable) {
-      throw new Error('Message box not found.');
-    }
+    if (!editable) throw new Error('Message box not found.');
 
     editable.focus();
     editable.textContent = '';
-    editable.textContent = text;
-    editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+    for (const char of text) {
+      editable.textContent += char;
+      editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+      const charDelay = getRandomDelay(CHAR_TYPING_DELAY_RANGE);
+      await sleep(charDelay);
+    }
   }
 
+  // خواندن تمام UIDهای مخاطبین از IndexedDB
+  function getAllContactUIDs() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(INDEXEDDB_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        let tx;
+        try {
+          tx = db.transaction(INDEXEDDB_STORE_NAME, 'readonly');
+        } catch (e) {
+          db.close();
+          reject(e);
+          return;
+        }
+        const store = tx.objectStore(INDEXEDDB_STORE_NAME);
+        const uids = new Set();
+        const cursorRequest = store.openCursor();
 
+        cursorRequest.onerror = () => {
+          db.close();
+          reject(cursorRequest.error);
+        };
 
-  console.log(`Starting to send messages to ${UID_LIST.length} contacts...`);
+        cursorRequest.onsuccess = (event) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            const record = cursor.value;
+            const uid = record.id || record.uid || record.userId;
+            if (uid !== undefined && uid !== null) {
+              uids.add(String(uid));
+            }
+            cursor.continue();
+          } else {
+            db.close();
+            resolve(Array.from(uids));
+          }
+        };
+      };
+    });
+  }
+
+  // بارگیری لیست UIDهای ارسال‌شده از localStorage
+  function loadSentUIDs() {
+    try {
+      const data = localStorage.getItem(SENT_UID_STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.warn('Failed to load sent UIDs from localStorage:', e);
+      return [];
+    }
+  }
+
+  // ذخیره لیست UIDهای ارسال‌شده در localStorage (به‌صورت یکتا)
+  function saveSentUIDs(uidSet) {
+    try {
+      localStorage.setItem(SENT_UID_STORAGE_KEY, JSON.stringify(Array.from(uidSet)));
+    } catch (e) {
+      console.warn('Failed to save sent UIDs to localStorage:', e);
+    }
+  }
+
+  // تابع کمکی برای دسترسی به لیست از کنسول
+  window.getSentUIDs = () => {
+    const list = loadSentUIDs();
+    console.log(list);
+    return list;
+  };
+
+  // دانلود فایل txt حاوی UIDهای ارسال‌شده
+  function downloadSentUIDs(sentUIDs) {
+    if (!sentUIDs.length) {
+      console.log('No UIDs were sent, nothing to download.');
+      return;
+    }
+    const content = sentUIDs.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sent_uids_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log(`Downloaded sent UIDs (${sentUIDs.length}).`);
+  }
+
+  // ===== شروع عملیات =====
+  console.log('Reading contacts from IndexedDB...');
+  let allUIDs = [];
+  try {
+    allUIDs = await getAllContactUIDs();
+  } catch (e) {
+    console.error('Failed to read IndexedDB contacts:', e);
+    return;
+  }
+
+  const targetUIDs = allUIDs.filter(uid => !SKIP_UID_SET.has(uid));
+
+  if (targetUIDs.length === 0) {
+    console.error('No target UIDs found or all are in SKIP_UID_SET.');
+    return;
+  }
+
+  console.log(`Found ${allUIDs.length} contacts, ${targetUIDs.length} will be processed after skip filter.`);
+
+  // بارگیری UIDهای ارسال‌شده قبلی از localStorage
+  const sentUIDSet = new Set(loadSentUIDs());
+  console.log(`Loaded ${sentUIDSet.size} previously sent UIDs from localStorage.`);
+
   console.log('To stop manually, type stopSending() in console.');
 
   let stopRequested = false;
@@ -110,65 +231,60 @@
 
   let sentCount = 0;
 
-  for (let i = 0; i < UID_LIST.length; i++) {
+  for (let i = 0; i < targetUIDs.length; i++) {
     if (stopRequested) {
       console.log('Stopped by user.');
       break;
     }
 
-    const uid = UID_LIST[i];
-    console.log(`\nProcessing ${i + 1}/${UID_LIST.length} | UID: ${uid}`);
+    const uid = targetUIDs[i];
+    console.log(`\nProcessing ${i + 1}/${targetUIDs.length} | UID: ${uid}`);
 
     try {
-      // ۱) رفتن به صفحهٔ مخاطب
       navigateToContact(uid);
 
-      // ۲) تاخیر بازه‌ای بعد از رفتن به صفحه
       const navDelay = getRandomDelay(DELAY_AFTER_NAVIGATION_RANGE);
       console.log(`Navigation delay: ${navDelay} ms`);
       await sleep(navDelay);
 
-      // ۳) انتظار فعال برای ظاهر شدن نام مخاطب
       console.log('Waiting for contact name...');
       const nameElement = await waitForElement('.nMlHDG', TIMEOUT_CONTACT_NAME);
       const contactName = nameElement.textContent.trim();
       console.log(`Contact name: ${contactName}`);
 
-      // ۴) ساخت پیام با جایگزینی x با نام مخاطب
-      const finalMessage = MESSAGE_TEMPLATE.replace('x', contactName);
+      // انتخاب تصادفی بر اساس طول فعلی آرایه
+      const randomTemplateIndex = Math.floor(Math.random() * MESSAGE_TEMPLATES.length);
+      const randomTemplate = MESSAGE_TEMPLATES[randomTemplateIndex];
+      const finalMessage = randomTemplate.replaceAll('x', contactName);
 
-      // ۵) انتظار فعال برای ظاهر شدن باکس پیام
       console.log('Waiting for message box...');
       await waitForElement('#editable-message-text', TIMEOUT_MESSAGE_BOX);
 
-      // ۶) تاخیر بازه‌ای قبل از نوشتن متن
       const typingDelay = getRandomDelay(DELAY_BEFORE_TYPING_RANGE);
       console.log(`Typing delay: ${typingDelay} ms`);
       await sleep(typingDelay);
 
-      // ۷) نوشتن متن
       await setMessageText(finalMessage);
 
-      // ۸) تاخیر بازه‌ای قبل از کلیک روی ارسال
       const sendDelay = getRandomDelay(DELAY_BEFORE_SEND_RANGE);
       console.log(`Send delay: ${sendDelay} ms`);
       await sleep(sendDelay);
 
-      // ۹) انتظار فعال برای دکمه ارسال
       console.log('Waiting for send button...');
       const sendButton = await waitForElement('[aria-label="send-button"]', TIMEOUT_SEND_BUTTON);
 
-      // ۱۰) کلیک روی دکمه ارسال
       sendButton.click();
       console.log(`Message sent to ${uid}.`);
+
+      // افزودن UID به مجموعه و ذخیره فوری در localStorage
+      sentUIDSet.add(uid);
+      saveSentUIDs(sentUIDSet);
       sentCount++;
 
-      // ۱۱) تاخیر بازه‌ای بعد از ارسال
       const afterSendDelay = getRandomDelay(DELAY_AFTER_SEND_RANGE);
       console.log(`After send delay: ${afterSendDelay} ms`);
       await sleep(afterSendDelay);
 
-      // ۱۲) مکث دوره‌ای پس از تعداد مشخصی ارسال موفق
       if (sentCount % PAUSE_AFTER_N_MESSAGES === 0) {
         const pauseDuration = getRandomDelay(PAUSE_DURATION_RANGE);
         console.log(`Pausing for ${pauseDuration} ms after ${sentCount} messages...`);
@@ -178,10 +294,11 @@
 
     } catch (error) {
       console.error(`Error for UID ${uid}: ${error.message}`);
-      // صبر کوتاه و ادامه به مخاطب بعدی
-      await sleep(1000);
+      console.log('Process stopped due to error. Downloading sent UID list...');
+      break;
     }
   }
 
+  downloadSentUIDs(Array.from(sentUIDSet));
   console.log('\nOperation finished.');
 })();
