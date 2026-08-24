@@ -12,25 +12,25 @@
   const TIMEOUT_SEND_BUTTON = 10000;
 
   // ⏱️ تأخیر بعد از رفتن به صفحه مخاطب (بازه min-max میلی‌ثانیه)
-  const DELAY_AFTER_NAVIGATION_RANGE = "2000-18000";
+  const DELAY_AFTER_NAVIGATION_RANGE = "3000-5000";
 
   // ⏱️ تأخیر قبل از نوشتن متن (بازه min-max میلی‌ثانیه)
-  const DELAY_BEFORE_TYPING_RANGE = "2000-20000";
+  const DELAY_BEFORE_TYPING_RANGE = "2000-4000";
 
   // ⏱️ تأخیر قبل از کلیک روی ارسال (بازه min-max میلی‌ثانیه)
-  const DELAY_BEFORE_SEND_RANGE = "2000-40000";
+  const DELAY_BEFORE_SEND_RANGE = "4000-8000";
 
   // ⏱️ تأخیر بعد از ارسال (بازه min-max میلی‌ثانیه)
-  const DELAY_AFTER_SEND_RANGE = "2000-53000";
+  const DELAY_AFTER_SEND_RANGE = "5000-7000";
 
   // ⏱️ تأخیر تصادفی بین تایپ هر کاراکتر (بازه min-max میلی‌ثانیه)
-  const CHAR_TYPING_DELAY_RANGE = "20-80";
+  const CHAR_TYPING_DELAY_RANGE = "20-100";
 
-  // ⏱️ مکث بعد از هر N ارسال موفق
-  const PAUSE_AFTER_N_MESSAGES = 100;
+  // ⏱️ بازه تعداد پیام‌ها قبل از مکث (به‌صورت min-max)
+  const PAUSE_AFTER_N_MESSAGES_RANGE = "100-200";
 
   // ⏱️ مدت‌زمان مکث (بازه min-max میلی‌ثانیه)
-  const PAUSE_DURATION_RANGE = "7200000-18000000";
+  const PAUSE_DURATION_RANGE = "5400000-10800000";
 
   // 🗄️ اطلاعات دیتابیس IndexedDB
   const INDEXEDDB_NAME = 'db';
@@ -40,31 +40,59 @@
   const SENT_UID_STORAGE_KEY = 'sentUIDs';
 
   // ⛔ مجموعه UIDهایی که نباید پیام بگیرند
-  const SKIP_UID_SET = new Set([
-    "-1",
-    "10",
-    "327373"
-  ]);
+  const SKIP_UID_SET = new Set(["49538","327373","1885507"]);
 
   // قالب‌های پیام – هر بار یکی به‌صورت تصادفی انتخاب می‌شود
   // توجه: کاراکتر x با نام مخاطب جایگزین می‌شود
-  const MESSAGE_TEMPLATES = [
-    `سلام x نمونه پیام شماره 1`,
-    `سلام x نمونه پیام شماره 2`,
-    `سلام x نمونه پیام شماره 3`,
-    `سلام x نمونه پیام شماره 4`,
-    `سلام x نمونه پیام شماره 5`,
-    `سلام x نمونه پیام شماره 6`,
-    `سلام x نمونه پیام شماره 7`,
-    `سلام x نمونه پیام شماره 8`,
-    `سلام x نمونه پیام شماره 9`,
-    `سلام x نمونه پیام شماره 10`,
-    `سلام x نمونه پیام شماره 11`,
-    `سلام x نمونه پیام شماره 12`,
-    `سلام x نمونه پیام شماره 13`,
-    `سلام x نمونه پیام شماره 14`,
-    `سلام x نمونه پیام شماره 15`
-  ];
+
+
+const MESSAGE_TEMPLATES = [
+  `سلام x، وقت بخیر
+نمونه پیام 1`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 2`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 3`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 4`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 5`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 6`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 7`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 8`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 9`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 10`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 11`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 12`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 13`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 14`,
+
+  `سلام x، وقت بخیر
+نمونه پیام 15`
+];
+
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -230,6 +258,9 @@
   window.stopSending = () => { stopRequested = true; };
 
   let sentCount = 0;
+  let messagesSinceLastPause = 0;
+  let nextPauseAfter = getRandomDelay(PAUSE_AFTER_N_MESSAGES_RANGE);
+  console.log(`First pause will occur after ${nextPauseAfter} messages.`);
 
   for (let i = 0; i < targetUIDs.length; i++) {
     if (stopRequested) {
@@ -280,17 +311,23 @@
       sentUIDSet.add(uid);
       saveSentUIDs(sentUIDSet);
       sentCount++;
+      messagesSinceLastPause++;
+
+      if (messagesSinceLastPause >= nextPauseAfter) {
+        const pauseDuration = getRandomDelay(PAUSE_DURATION_RANGE);
+        console.log(`Pausing for ${pauseDuration} ms after ${messagesSinceLastPause} messages...`);
+        await sleep(pauseDuration);
+        console.log('Pause finished.');
+
+        // بعد از مکث، تعداد پیام‌ها برای مکث بعدی دوباره تصادفی انتخاب می‌شود
+        messagesSinceLastPause = 0;
+        nextPauseAfter = getRandomDelay(PAUSE_AFTER_N_MESSAGES_RANGE);
+        console.log(`Next pause will occur after ${nextPauseAfter} messages.`);
+      }
 
       const afterSendDelay = getRandomDelay(DELAY_AFTER_SEND_RANGE);
       console.log(`After send delay: ${afterSendDelay} ms`);
       await sleep(afterSendDelay);
-
-      if (sentCount % PAUSE_AFTER_N_MESSAGES === 0) {
-        const pauseDuration = getRandomDelay(PAUSE_DURATION_RANGE);
-        console.log(`Pausing for ${pauseDuration} ms after ${sentCount} messages...`);
-        await sleep(pauseDuration);
-        console.log('Pause finished.');
-      }
 
     } catch (error) {
       console.error(`Error for UID ${uid}: ${error.message}`);
