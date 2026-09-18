@@ -1,4 +1,26 @@
 (async function() {
+  // ═══════════════════════════════════════════
+  // 🕐 TIMESTAMP WRAPPER برای همه لاگ‌ها
+  // ═══════════════════════════════════════════
+  const _origLog = console.log.bind(console);
+  const _origWarn = console.warn.bind(console);
+  const _origError = console.error.bind(console);
+  function ts() {
+    const d = new Date();
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const hh = String(h).padStart(2, '0');
+    return `${hh}:${m} ${ampm}`;
+  }
+  console.log = (...args) => _origLog(`[${ts()}]`, ...args);
+  console.warn = (...args) => _origWarn(`[${ts()}]`, ...args);
+  console.error = (...args) => _origError(`[${ts()}]`, ...args);
+  // ═══════════════════════════════════════════
+
+  try {
+
   // ⏱️ تاخیر بعد از کلیک روی نام عضو
   const CLICK_MEMBER_NAME_DELAY_RANGE = "100-500";
 
@@ -365,6 +387,9 @@
     return max;
   }
 
+  // ═══════════════════════════════════════════
+  // ✅ اصلاح شده: جمع‌آوری UIDها در حین اسکرول
+  // ═══════════════════════════════════════════
   async function preloadMemberList(container, tbody) {
     console.log('🔄 Preloading member list...');
     container.scrollTop = 0;
@@ -373,6 +398,19 @@
     let prevMaxIndex = -1;
     let noIncreaseCount = 0;
     let scrollAttempts = 0;
+    const collectedUIDs = new Set();
+
+    // تابع کمکی برای جمع‌آوری UID از ردیف‌های فعلی
+    const collectUIDs = () => {
+      const rows = tbody.querySelectorAll('tr.GUqHyZ');
+      rows.forEach(r => {
+        const uid = getUIDFromRow(r);
+        if (uid) collectedUIDs.add(uid);
+      });
+    };
+
+    // جمع‌آوری اولیه
+    collectUIDs();
 
     const targetMaxIndex = (TOTAL_MEMBERS_COUNT > 0) ? TOTAL_MEMBERS_COUNT - 1 : -1;
 
@@ -405,12 +443,20 @@
       scrollAttempts++;
 
       await sleep(getDelay(PRELOAD_SCROLL_DELAY_RANGE));
+
+      // ✅ بعد از هر اسکرول، UIDهای ردیف‌های جدید رو جمع کن
+      collectUIDs();
     }
 
     maxKnownIndex = prevMaxIndex;
     console.log(`✅ Preload finished. Max index seen: ${maxKnownIndex}. Scrolling back to top...`);
     container.scrollTop = 0;
     await sleep(getDelay(SCROLL_STEP_DELAY_RANGE));
+
+    // ✅ یک بار دیگه هم چک کن (شاید ردیف‌های بالایی دوباره رندر شدن)
+    collectUIDs();
+
+    return Array.from(collectedUIDs);
   }
 
   async function tryLoadRow(targetIndex) {
@@ -463,7 +509,15 @@
   }
   console.log('🎯 Scroll container:', container.className);
 
-  await preloadMemberList(container, tbody);
+  // ✅ اجرای preload و گرفتن لیست UIDها
+  const allUIDs = await preloadMemberList(container, tbody);
+
+  // ✅ چاپ همه UIDها به صورت JSON array
+  console.log('\n═══════════════════════════════════════════');
+  console.log(`📋 Total unique UIDs collected: ${allUIDs.length}`);
+  console.log('🔑 UIDs JSON:');
+  console.log(JSON.stringify(allUIDs));
+  console.log('═══════════════════════════════════════════\n');
 
   let totalMembers = TOTAL_MEMBERS_COUNT > 0 ? TOTAL_MEMBERS_COUNT : maxKnownIndex + 1;
   console.log(`ℹ️ Total members to process: ${totalMembers} (max index: ${totalMembers - 1})`);
@@ -731,5 +785,12 @@
   console.log(`⏭️ Skipped rows (load failure): ${skippedRowList.length}`);
   if (skippedRowList.length > 0) {
     console.log('📋 Skipped row indices:', JSON.stringify(skippedRowList.map(s => s.index)));
+  }
+
+  } finally {
+    // بازگردانی console به حالت اصلی
+    console.log = _origLog;
+    console.warn = _origWarn;
+    console.error = _origError;
   }
 })();
