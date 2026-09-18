@@ -1,21 +1,21 @@
 (async function() {
   // ⏱️ تاخیر بعد از کلیک روی نام عضو
-  const CLICK_MEMBER_NAME_DELAY_RANGE = "100-3000";
+  const CLICK_MEMBER_NAME_DELAY_RANGE = "100-500";
 
   // ⏱️ تاخیر بعد از کلیک روی دکمه بیشتر
-  const CLICK_MORE_BUTTON_DELAY_RANGE = "100-3000";
+  const CLICK_MORE_BUTTON_DELAY_RANGE = "100-500";
 
   // ⏱️ تاخیر بعد از کلیک روی افزودن به مخاطبین
-  const CLICK_ADD_TO_CONTACTS_DELAY_RANGE = "100-3000";
+  const CLICK_ADD_TO_CONTACTS_DELAY_RANGE = "100-500";
 
   // ⏱️ تاخیر بعد از کلیک روی ذخیره
-  const CLICK_SAVE_BUTTON_DELAY_RANGE = "5000-10000";
+  const CLICK_SAVE_BUTTON_DELAY_RANGE = "1000-2000";
 
   // ⏱️ تاخیر بعد از بستن مودال
-  const CLOSE_MODAL_DELAY_RANGE = "100-3000";
+  const CLOSE_MODAL_DELAY_RANGE = "100-1000";
 
   // ⏱️ تاخیر بعد از اسکرول برای بارگذاری ردیف
-  const SCROLL_STEP_DELAY_RANGE = "100-3000";
+  const SCROLL_STEP_DELAY_RANGE = "100-1000";
 
   // ⏱️ فاصله بین بررسی‌ها در حلقه‌های انتظار
   const POLL_INTERVAL = 1;
@@ -51,7 +51,7 @@
   const PRELOAD_SCROLL_DELAY_RANGE = "200-1000";
 
   // ⏱️ توقف پس از افزودن هر تعداد مشخصی مخاطب
-  const PAUSE_INTERVAL_ADDED = 300;
+  const PAUSE_INTERVAL_ADDED = 1500;
   const PAUSE_DURATION_ADDED_MS = 7200000;
 
   // ⏱️ حداکثر زمان انتظار برای تایید افزوده شدن در IndexedDB
@@ -74,7 +74,7 @@
   const PRELOAD_MAX_SCROLL_ATTEMPTS = 10000;
 
   // تعداد کل اعضای گروه (اگر 0 باشد، کد خودش تشخیص میده، بهتر هست 3 عدد از تعداد اعضای گروه کم ترباشه)
-  const TOTAL_MEMBERS_COUNT = 4974;
+  const TOTAL_MEMBERS_COUNT = 6437;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجه not-added
   const MAX_NOT_ADDED_RETRIES = 10;
@@ -140,7 +140,7 @@
   async function findVisibleByTextAndTagInScope(text, tag, timeout, scope = document) {
     const start = Date.now();
     const xpathPrefix = (scope === document) ? '//' : './/';
-    const xpath = `${xpathPrefix}${tag}[text()='${text}']`;
+    const xpath = `${xpathPrefix}${tag}[normalize-space(text())='${text}']`;
     while (Date.now() - start < timeout) {
       const result = document.evaluate(xpath, scope, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
       const el = result.singleNodeValue;
@@ -153,7 +153,7 @@
   async function findVisibleByTextInScope(text, timeout, scope = document) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
-      const all = Array.from(scope.querySelectorAll('div, span, button, a'));
+      const all = Array.from(scope.querySelectorAll('div, span, button, a, bdi, p'));
       const found = all.find(el => isVisible(el) && (el.textContent || '').trim().includes(text));
       if (found) return found;
       await sleep(POLL_INTERVAL);
@@ -164,11 +164,11 @@
   async function waitForMenuOption(scope, text, timeout) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
-      const allInScope = Array.from(scope.querySelectorAll('div, span, button, a'));
+      const allInScope = Array.from(scope.querySelectorAll('div, span, button, a, bdi, p'));
       const foundInScope = allInScope.find(el => isVisible(el) && (el.textContent || '').trim().includes(text));
       if (foundInScope) return foundInScope;
 
-      const allDoc = Array.from(document.querySelectorAll('div, span, button, a'));
+      const allDoc = Array.from(document.querySelectorAll('div, span, button, a, bdi, p'));
       const foundDoc = allDoc.find(el => isVisible(el) && (el.textContent || '').trim().includes(text));
       if (foundDoc) return foundDoc;
 
@@ -468,14 +468,16 @@
   let totalMembers = TOTAL_MEMBERS_COUNT > 0 ? TOTAL_MEMBERS_COUNT : maxKnownIndex + 1;
   console.log(`ℹ️ Total members to process: ${totalMembers} (max index: ${totalMembers - 1})`);
 
+  // ✅ اصلاح شده: پیدا کردن والد کلیک‌پذیر برای <bdi>
   function findClickableAncestor(element) {
     let el = element;
     while (el && el !== document.body) {
-      if (el.matches('[role="button"], [role="menuitem"], button, [data-testid]')) {
+      if (el.matches('[role="button"], [role="menuitem"], button, [data-testid], [tabindex]')) {
         return el;
       }
       el = el.parentElement;
     }
+    // اگر والد کلیک‌پذیری پیدا نشد، خود عنصر را برگردان
     return element;
   }
 
@@ -587,8 +589,9 @@
 
     stepStart = Date.now();
     let addElement;
+    // ✅ اصلاح اصلی: جستجوی bdi به جای span
     try {
-      addElement = await findVisibleByTextAndTagInScope('افزودن به مخاطبین', 'span', TIMEOUT_FIND_ADD_OPTION, profileModal);
+      addElement = await findVisibleByTextAndTagInScope('افزودن به مخاطبین', 'bdi', TIMEOUT_FIND_ADD_OPTION, profileModal);
     } catch (e) {
       try {
         addElement = await waitForMenuOption(profileModal, 'افزودن به مخاطبین', TIMEOUT_FIND_ADD_OPTION);
