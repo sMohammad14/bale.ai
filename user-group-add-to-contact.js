@@ -31,7 +31,7 @@
   const CLICK_ADD_TO_CONTACTS_DELAY_RANGE = "100-500";
 
   // ⏱️ تاخیر بعد از کلیک روی ذخیره
-  const CLICK_SAVE_BUTTON_DELAY_RANGE = "1000-2000";
+  const CLICK_SAVE_BUTTON_DELAY_RANGE = "500-1500";
 
   // ⏱️ تاخیر بعد از بستن مودال
   const CLOSE_MODAL_DELAY_RANGE = "100-1000";
@@ -96,7 +96,7 @@
   const PRELOAD_MAX_SCROLL_ATTEMPTS = 10000;
 
   // تعداد کل اعضای گروه (اگر 0 باشد، کد خودش تشخیص میده، بهتر هست 3 عدد از تعداد اعضای گروه کم ترباشه)
-  const TOTAL_MEMBERS_COUNT = 6437;
+  const TOTAL_MEMBERS_COUNT = 6430;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجه not-added
   const MAX_NOT_ADDED_RETRIES = 10;
@@ -105,7 +105,7 @@
   const MAX_ROW_LOAD_ATTEMPTS = 15;
 
   // لیست UID های مسدود که به مخاطبین اضافه نمی‌شوند (Set)
-  const BLOCKED_UIDS = new Set(["-1", "10", "327373"]);
+  const BLOCKED_UIDS = new Set(["6863","5555"]);
 
   let totalChecked = 0;
   let alreadyContacts = 0;
@@ -197,6 +197,32 @@
       await sleep(POLL_INTERVAL);
     }
     throw new Error(`Menu option "${text}" not found`);
+  }
+
+  // ═══════════════════════════════════════════
+  // ✅ تابع جدید: صبر کن تا منو کامل باز شه (بر اساس ساختار واقعی بله)
+  // منو: div.karN60[role="menu"] با حداقل ۲ آیتم div.YG4CQf
+  // ═══════════════════════════════════════════
+  async function waitForMenuReady(scope, timeout) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      let menu = scope.querySelector('div.karN60[role="menu"]');
+      if (!menu || !isVisible(menu)) {
+        menu = document.querySelector('div.karN60[role="menu"]');
+      }
+      if (menu && isVisible(menu)) {
+        const items = menu.querySelectorAll('div.YG4CQf');
+        if (items.length >= 2) return menu;
+      }
+      await sleep(POLL_INTERVAL);
+    }
+    return null;
+  }
+
+  // ✅ تابع جدید: چک کن آیا این متن توی منو هست یا نه
+  function menuHasText(menu, text) {
+    const bdis = Array.from(menu.querySelectorAll('bdi'));
+    return bdis.some(b => (b.textContent || '').trim() === text);
   }
 
   async function waitForProfileName(modal, timeout) {
@@ -387,9 +413,6 @@
     return max;
   }
 
-  // ═══════════════════════════════════════════
-  // ✅ اصلاح شده: جمع‌آوری UIDها در حین اسکرول
-  // ═══════════════════════════════════════════
   async function preloadMemberList(container, tbody) {
     console.log('🔄 Preloading member list...');
     container.scrollTop = 0;
@@ -400,7 +423,6 @@
     let scrollAttempts = 0;
     const collectedUIDs = new Set();
 
-    // تابع کمکی برای جمع‌آوری UID از ردیف‌های فعلی
     const collectUIDs = () => {
       const rows = tbody.querySelectorAll('tr.GUqHyZ');
       rows.forEach(r => {
@@ -409,7 +431,6 @@
       });
     };
 
-    // جمع‌آوری اولیه
     collectUIDs();
 
     const targetMaxIndex = (TOTAL_MEMBERS_COUNT > 0) ? TOTAL_MEMBERS_COUNT - 1 : -1;
@@ -444,7 +465,6 @@
 
       await sleep(getDelay(PRELOAD_SCROLL_DELAY_RANGE));
 
-      // ✅ بعد از هر اسکرول، UIDهای ردیف‌های جدید رو جمع کن
       collectUIDs();
     }
 
@@ -453,13 +473,15 @@
     container.scrollTop = 0;
     await sleep(getDelay(SCROLL_STEP_DELAY_RANGE));
 
-    // ✅ یک بار دیگه هم چک کن (شاید ردیف‌های بالایی دوباره رندر شدن)
     collectUIDs();
 
     return Array.from(collectedUIDs);
   }
 
   async function tryLoadRow(targetIndex) {
+    // ✅ هر بار container رو تازه کن (ممکنه بعد از بستن مودال، DOM عوض شده باشه)
+    refreshContainer();
+
     for (let attempt = 0; attempt < MAX_ROW_LOAD_ATTEMPTS; attempt++) {
       let row = tbody.querySelector(`tr.GUqHyZ[data-index="${targetIndex}"]`);
       if (row) return row;
@@ -494,7 +516,9 @@
   }
 
   const tbody = await waitForVisibleSelector('tbody[data-testid="virtuoso-item-list"]', TIMEOUT_INITIAL_MEMBER_LIST);
-  const container = (function() {
+
+  // ✅ تغییر: const → let
+  let container = (function() {
     let el = tbody.parentElement;
     while (el && el !== document.body) {
       const style = window.getComputedStyle(el);
@@ -509,6 +533,22 @@
   }
   console.log('🎯 Scroll container:', container.className);
 
+  // ✅ اضافه شده: refresh container بعد از هر modal close
+  function refreshContainer() {
+    const tb = document.querySelector('tbody[data-testid="virtuoso-item-list"]');
+    if (!tb) return false;
+    let el = tb.parentElement;
+    while (el && el !== document.body) {
+      const s = window.getComputedStyle(el);
+      if (s.overflowY === 'auto' || s.overflowY === 'scroll') {
+        container = el;
+        return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
   // ✅ اجرای preload و گرفتن لیست UIDها
   const allUIDs = await preloadMemberList(container, tbody);
 
@@ -522,7 +562,6 @@
   let totalMembers = TOTAL_MEMBERS_COUNT > 0 ? TOTAL_MEMBERS_COUNT : maxKnownIndex + 1;
   console.log(`ℹ️ Total members to process: ${totalMembers} (max index: ${totalMembers - 1})`);
 
-  // ✅ اصلاح شده: پیدا کردن والد کلیک‌پذیر برای <bdi>
   function findClickableAncestor(element) {
     let el = element;
     while (el && el !== document.body) {
@@ -531,7 +570,6 @@
       }
       el = el.parentElement;
     }
-    // اگر والد کلیک‌پذیری پیدا نشد، خود عنصر را برگردان
     return element;
   }
 
@@ -628,22 +666,34 @@
     await sleep(getDelay(CLICK_MORE_BUTTON_DELAY_RANGE));
     logStep('Click more button + delay', stepStart);
 
+    // ═══════════════════════════════════════════
+    // ✅ اصلاح اصلی: صبر کن منو کامل باز شه، بعد فوری چک کن
+    // ═══════════════════════════════════════════
     stepStart = Date.now();
     try {
-      await waitForMenuOption(profileModal, 'مسدود و حذف کردن', TIMEOUT_CHECK_BOT);
-      botSkipped++;
-      processedUIDs.add(uid);
-      console.log('ℹ️ Bot detected (block and delete option found), skipping...');
-      await closeOpenMenu(profileModal);
-      await returnToListAfterClosing(profileModal);
-      logStep('Check bot', stepStart);
-      return 'bot';
-    } catch (e) {}
+      const menuReady = await waitForMenuReady(profileModal, TIMEOUT_CHECK_BOT);
+      if (menuReady) {
+        if (menuHasText(menuReady, 'مسدود و حذف کردن')) {
+          botSkipped++;
+          processedUIDs.add(uid);
+          console.log('ℹ️ Bot detected (menu ready + bot option found), skipping...');
+          await closeOpenMenu(profileModal);
+          await returnToListAfterClosing(profileModal);
+          logStep('Check bot (detected)', stepStart);
+          return 'bot';
+        } else {
+          console.log('ℹ️ Not a bot (menu ready, no bot option).');
+        }
+      } else {
+        console.warn('⚠️ Menu did not become ready within timeout.');
+      }
+    } catch (e) {
+      console.error('❌ Bot check error:', e);
+    }
     logStep('Check bot (not found)', stepStart);
 
     stepStart = Date.now();
     let addElement;
-    // ✅ اصلاح اصلی: جستجوی bdi به جای span
     try {
       addElement = await findVisibleByTextAndTagInScope('افزودن به مخاطبین', 'bdi', TIMEOUT_FIND_ADD_OPTION, profileModal);
     } catch (e) {
