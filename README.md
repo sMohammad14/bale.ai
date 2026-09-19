@@ -102,18 +102,19 @@ uid-extractor-from-contats-list.js
 
 برای دیدن محتوا، به دو روش مستقیم و فراخوانی:
 
-``` JSON.parse(localStorage.getItem('sentUIDs')) ```
 
+نمایش  لیست ارسال شده ها دستی:
+``` localStorage.getItem('sentUIDs') ```
+
+
+نمایش  لیست ارسال شده ها با تابع:
 ``` getSentUIDs() ```
 
-برای خالی کردن آرایه:
 
-``` localStorage.setItem('sentUIDs', '[]') ```
-
-حذف موجودیت آرایه:
-
+پاکسازی لیست ارسال شده ها به صورت دستی:
 ``` localStorage.removeItem('sentUIDs') ```
 
-
+پاکسازی لیست ارسال شده ها با تابع:
+``` clearSentUIDs() ```
 
 ----------------------------------------------------------------------------------
