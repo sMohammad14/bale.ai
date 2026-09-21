@@ -159,17 +159,14 @@ uid-extractor-from-contats-list.js
 ``` removeGroup(name) ```
 
 
-
-
 ار طریق storage
 برای دیدن 
 
 پاک کردن گروه‌ها
-JSON.parse(localStorage.getItem('statusGroups'))
+``` JSON.parse(localStorage.getItem('statusGroups')) ```
 
 پاک کردن UIDهای ناموفق
-JSON.parse(localStorage.getItem('statusGroupsFailed'))
-
+``` JSON.parse(localStorage.getItem('statusGroupsFailed')) ```
 
 پاک کردن گروه‌ها
 ``` localStorage.removeItem('statusGroups') ```
