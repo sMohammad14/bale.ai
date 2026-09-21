@@ -162,10 +162,10 @@ uid-extractor-from-contats-list.js
 ار طریق storage
 برای دیدن 
 
-پاک کردن گروه‌ها
+مشاهده گروه‌ها
 ``` JSON.parse(localStorage.getItem('statusGroups')) ```
 
-پاک کردن UIDهای ناموفق
+مشاهده  UIDهای ناموفق
 ``` JSON.parse(localStorage.getItem('statusGroupsFailed')) ```
 
 پاک کردن گروه‌ها
