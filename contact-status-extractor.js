@@ -3,8 +3,10 @@
   // 📋 لیست UIDهایی که باید بررسی شوند
   // ════════════════════════════════════════════════════════════
   const TARGET_UID_LIST = [
-      // "49565438", "327654373"
+    // UIDها را اینجا اضافه کن، مثال:
+    // "52", "4532", "34545"
   ];
+
   // ════════════════════════════════════════════════════════════
   // ⛔ UIDهایی که نباید بررسی شوند
   // ════════════════════════════════════════════════════════════
@@ -23,9 +25,9 @@
   const TIMEOUT_STATUS = 60000;       // حداکثر انتظار برای ظاهر شدن متن وضعیت
   const TIMEOUT_MESSAGE_BOX = 60000;  // حداکثر انتظار برای ظاهر شدن باکس پیام
 
-  const DELAY_AFTER_NAVIGATION_RANGE = "10-500";        // تأخیر تصادفی بعد از رفتن به چت
-  const DELAY_BEFORE_READING_STATUS_RANGE = "10-500";    // تأخیر تصادفی قبل از خواندن وضعیت
-  const DELAY_BETWEEN_USERS_RANGE = "10-500";           // تأخیر تصادفی بین هر کاربر و کاربر بعدی
+  const DELAY_AFTER_NAVIGATION_RANGE = "20-500";        // تأخیر تصادفی بعد از رفتن به چت
+  const DELAY_BEFORE_READING_STATUS_RANGE = "20-500";    // تأخیر تصادفی قبل از خواندن وضعیت
+  const DELAY_BETWEEN_USERS_RANGE = "20-500";           // تأخیر تصادفی بین هر کاربر و کاربر بعدی
 
   const PAUSE_AFTER_N_USERS_RANGE = "100-300";               // بعد از چند کاربر (تصادفی) مکث انجام شود
   const PAUSE_DURATION_RANGE = "60000-180000";             // مدت مکث تصادفی (۱ تا ۳ دقیقه)
@@ -210,7 +212,10 @@
       }
       const stored = JSON.parse(raw);
       log('Stored groups from localStorage:');
-      log(JSON.stringify(stored, null, 2));
+      const keys = Object.keys(stored);
+      for (const key of keys) {
+        console.log(`"${key}" → ${JSON.stringify(stored[key])}`);
+      }
       return stored;
     } catch (e) {
       warn('Failed to read stored groups:', e);
