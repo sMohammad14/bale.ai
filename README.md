@@ -118,3 +118,61 @@ uid-extractor-from-contats-list.js
 ``` clearSentUIDs() ```
 
 ----------------------------------------------------------------------------------
+
+### 💡 contact-status-extractor.js
+
+### استخراج آخرین وضعیت آنلاین شدن کاربران
+نسخه مقاوم نسبت به مسدودسازی سمت سرور
+
+
+برای اینکه پیام های انبوه رو ارسال کنیم و دیرتر کاربران اسپم گذارش کنن و اکانت از دست بره این سناریو رو پیش میگیرم که اول به کاربرانی که آخرین آنلاینیشون مربوط به مدت ها پیش هست پیام ارسال بشه بعد به اونهایی که اخیرا آنلاین شدن
+چون کاربری که مدت ها آنلاین نشده احتمال اینکه تازگی هاهم آنلاین بشه و احتمالا گزارش اسپم بده کم تره، پس اول به اون پیام میدیم. اینجوری میتونیم عداد پیام های بیشتری ارسال کنیم و دیرتر بلاک بشیم!
+
+مشاهده آرایه ها
+``` showGroups() ```
+
+مشاهده آرایه ها از localStorage
+``` showStoredGroups() ```
+
+مشاهد شناسه های که تام اوت شدن
+``` showFailedUIDs() ```
+
+حذف آرایه ها و فضای ذخیره ملی
+``` clearGroups() ```
+
+حذف آرایه ها
+``` clearStoredGroups() ```
+
+حذف آرایه ناموفق ها
+``` clearFailedUIDs() ```
+
+تازه سازی آرایه ها
+``` reloadGroupsFromStorage() ```
+
+دانلود JSON
+``` downloadGroups() ```
+
+حذف یک UID
+``` removeUid(uid) ```
+
+حذف یک آرایه
+``` removeGroup(name) ```
+
+
+
+
+ار طریق storage
+برای دیدن 
+
+پاک کردن گروه‌ها
+JSON.parse(localStorage.getItem('statusGroups'))
+
+پاک کردن UIDهای ناموفق
+JSON.parse(localStorage.getItem('statusGroupsFailed'))
+
+
+پاک کردن گروه‌ها
+``` localStorage.removeItem('statusGroups') ```
+
+پاک کردن UIDهای ناموفق
+``` localStorage.removeItem('statusGroupsFailed') ```
