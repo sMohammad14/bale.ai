@@ -54,49 +54,49 @@
 
 
   const MESSAGE_TEMPLATES = [
-    `سلام x، وقت بخیر
+    `سلام name_of_contact، وقت بخیر
 پیام 1`,
 
-    `سلام x، وقت بخیر
+    `سلام name_of_contact، وقت بخیر
 پیام 2`,
 
-    `سلام x، احتراماً
+    `سلام name_of_contact، احتراماً
 پیا 3`,
 
-    `سلام x، وقت بخیر
+    `سلام name_of_contact، وقت بخیر
 پیام 4`,
 
-    `سلام x، وقت شما بخیر
+    `سلام name_of_contact، وقت شما بخیر
 پام 5`,
 
-    `سلام x، ارادت داریم
+    `سلام name_of_contact، ارادت داریم
 پیام 6`,
 
-    `سلام x، وقت بخیر
+    `سلام name_of_contact، وقت بخیر
 پیام 7`,
 
-    `سلام x، احتراماً
+    `سلام name_of_contact، احتراماً
 پیام 8.`,
 
-    `سلام x، وقت بخیر
+    `سلام name_of_contact، وقت بخیر
 پیام 9`,
 
-    `سلام x، وقت شما بخیر
+    `سلام name_of_contact، وقت شما بخیر
 پیام 10`,
 
-    `سلام x، ارادت داریم
+    `سلام name_of_contact، ارادت داریم
 پیام 11`,
 
-    `سلام x، وقت بخیر
+    `سلام name_of_contact، وقت بخیر
 پیام 12`,
 
-    `سلام x، احتراماً
+    `سلام name_of_contact، احتراماً
 پیام 13`,
 
-    `سلام x، وقت شما بخیر
+    `سلام name_of_contact، وقت شما بخیر
 پیام 14`,
 
-    `سلام x، ارادت داریم
+    `سلام name_of_contact، ارادت داریم
 پیام 15`
   ];
 
@@ -295,7 +295,7 @@
       const randomTemplate = MESSAGE_TEMPLATES[
         Math.floor(Math.random() * MESSAGE_TEMPLATES.length)
       ];
-      const finalMessage = randomTemplate.replaceAll('x', contactName);
+      const finalMessage = randomTemplate.replaceAll('name_of_contact', contactName);
 
       try {
         console.log('Waiting for message box...');
