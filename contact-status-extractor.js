@@ -26,7 +26,7 @@
   const TIMEOUT_MESSAGE_BOX = 60000;  // حداکثر انتظار برای ظاهر شدن باکس پیام
 
   const DELAY_AFTER_NAVIGATION_RANGE = "20-500";        // تأخیر تصادفی بعد از رفتن به چت
-  const DELAY_BEFORE_READING_STATUS_RANGE = "20-500";    // تأخیر تصادفی قبل از خواندن وضعیت
+  const DELAY_BEFORE_READING_STATUS_RANGE = "1000-1500";    // تأخیر تصادفی قبل از خواندن وضعیت
   const DELAY_BETWEEN_USERS_RANGE = "20-500";           // تأخیر تصادفی بین هر کاربر و کاربر بعدی
 
   const PAUSE_AFTER_N_USERS_RANGE = "100-300";               // بعد از چند کاربر (تصادفی) مکث انجام شود
