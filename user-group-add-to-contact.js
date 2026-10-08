@@ -22,22 +22,22 @@
   try {
 
   // ⏱️ تاخیر بعد از کلیک روی نام عضو
-  const CLICK_MEMBER_NAME_DELAY_RANGE = "100-500";
+  const CLICK_MEMBER_NAME_DELAY_RANGE = "50-300";
 
   // ⏱️ تاخیر بعد از کلیک روی دکمه بیشتر
-  const CLICK_MORE_BUTTON_DELAY_RANGE = "100-500";
+  const CLICK_MORE_BUTTON_DELAY_RANGE = "50-300";
 
   // ⏱️ تاخیر بعد از کلیک روی افزودن به مخاطبین
-  const CLICK_ADD_TO_CONTACTS_DELAY_RANGE = "100-500";
+  const CLICK_ADD_TO_CONTACTS_DELAY_RANGE = "50-300";
 
   // ⏱️ تاخیر بعد از کلیک روی ذخیره
-  const CLICK_SAVE_BUTTON_DELAY_RANGE = "500-1500";
+  const CLICK_SAVE_BUTTON_DELAY_RANGE = "600-1500";
 
   // ⏱️ تاخیر بعد از بستن مودال
-  const CLOSE_MODAL_DELAY_RANGE = "100-1000";
+  const CLOSE_MODAL_DELAY_RANGE = "50-1000";
 
   // ⏱️ تاخیر بعد از اسکرول برای بارگذاری ردیف
-  const SCROLL_STEP_DELAY_RANGE = "100-1000";
+  const SCROLL_STEP_DELAY_RANGE = "50-1000";
 
   // ⏱️ فاصله بین بررسی‌ها در حلقه‌های انتظار
   const POLL_INTERVAL = 1;
@@ -70,11 +70,12 @@
   const TIMEOUT_LIST_RETURN = 5000;
 
   // ⏱️ تاخیر تصادفی بعد از هر اسکرول پیش‌بارگذاری
-  const PRELOAD_SCROLL_DELAY_RANGE = "200-1000";
+  const PRELOAD_SCROLL_DELAY_RANGE = "200-1500";
 
-  // ⏱️ توقف پس از افزودن هر تعداد مشخصی مخاطب
-  const PAUSE_INTERVAL_ADDED = 1500;
-  const PAUSE_DURATION_ADDED_MS = 7200000;
+  // ⏱️ تعداد تصادفی مخاطب برای توقف (بازه تصادفی)
+  const PAUSE_INTERVAL_ADDED = "200-400";
+  // ⏱️ مدت زمان توقف تصادفی (بازه تصادفی)
+  const PAUSE_DURATION_ADDED_MS = "180000-300000";
 
   // ⏱️ حداکثر زمان انتظار برای تایید افزوده شدن در IndexedDB
   const TIMEOUT_INDEXEDDB_ADD_CONFIRM = 5000;
@@ -96,7 +97,7 @@
   const PRELOAD_MAX_SCROLL_ATTEMPTS = 10000;
 
   // تعداد کل اعضای گروه (اگر 0 باشد، کد خودش تشخیص میده، بهتر هست 3 عدد از تعداد اعضای گروه کم ترباشه)
-  const TOTAL_MEMBERS_COUNT = 6430;
+  const TOTAL_MEMBERS_COUNT = 2791;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجه not-added
   const MAX_NOT_ADDED_RETRIES = 10;
@@ -771,6 +772,7 @@
   window.stopAutomation = () => { stopRequested = true; };
 
   let targetIndex = 0;
+  let nextPauseAt = getDelay(PAUSE_INTERVAL_ADDED);
 
   while (!stopRequested && targetIndex < totalMembers) {
     let row = await tryLoadRow(targetIndex);
@@ -808,10 +810,12 @@
       targetIndex++;
     }
 
-    if (result === 'added' && addedCount > 0 && addedCount % PAUSE_INTERVAL_ADDED === 0) {
-      console.log(`⏸️ Reached ${addedCount} added contacts. Pausing for ${PAUSE_DURATION_ADDED_MS} ms...`);
-      await sleep(PAUSE_DURATION_ADDED_MS);
+    if (result === 'added' && addedCount >= nextPauseAt) {
+      const pauseDuration = getDelay(PAUSE_DURATION_ADDED_MS);
+      console.log(`⏸️ Reached ${addedCount} added contacts. Pausing for ${pauseDuration} ms...`);
+      await sleep(pauseDuration);
       console.log('▶️ Pause finished. Continuing...');
+      nextPauseAt = addedCount + getDelay(PAUSE_INTERVAL_ADDED);
     }
 
     if (targetIndex >= totalMembers) {
@@ -843,4 +847,4 @@
     console.warn = _origWarn;
     console.error = _origError;
   }
-})();
+})(); 
