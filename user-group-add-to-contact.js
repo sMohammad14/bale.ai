@@ -1,7 +1,7 @@
 (async function() {
-  // ═══════════════════════════════════════════
+  // ══════════════════════════════════════════
   // 🕐 TIMESTAMP WRAPPER برای همه لاگ‌ها
-  // ═══════════════════════════════════════════
+  // ══════════════════════════════════════════
   const _origLog = console.log.bind(console);
   const _origWarn = console.warn.bind(console);
   const _origError = console.error.bind(console);
