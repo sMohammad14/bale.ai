@@ -29,8 +29,10 @@
   const DELAY_BEFORE_READING_STATUS_RANGE = "1000-1500";    // تأخیر تصادفی قبل از خواندن وضعیت
   const DELAY_BETWEEN_USERS_RANGE = "20-500";           // تأخیر تصادفی بین هر کاربر و کاربر بعدی
 
-  const PAUSE_AFTER_N_USERS_RANGE = "100-300";               // بعد از چند کاربر (تصادفی) مکث انجام شود
-  const PAUSE_DURATION_RANGE = "60000-180000";             // مدت مکث تصادفی (۱ تا ۳ دقیقه)
+  // 🆕 رفتن به صفحه flow بعد از تعداد تصادفی کاربر
+  const FLOW_URL = 'https://web.bale.ai/flow';
+  const FLOW_VISIT_AFTER_N_USERS_RANGE = "5-15";   // بعد از چند کاربر (تصادفی) برو به flow
+  const FLOW_VISIT_PAUSE_RANGE = "3000-10000";     // مدت مکث تصادفی در صفحه flow (میلی‌ثانیه)
 
   // ════════════════════════════════════════════════════════════
   // 🎯 سلکتورهای DOM
@@ -46,6 +48,13 @@
   const STORAGE_KEY = 'statusGroups';
   const FAILED_STORAGE_KEY = 'statusGroupsFailed'; // کلید ذخیره‌سازی UIDهای ناموفق
   const UNKNOWN_KEY = 'Unknown';
+
+  // 🆕 گروه‌هایی که باید مجدداً بررسی شوند
+  const RECHECK_GROUP_KEYWORDS = ['درحال اتصال', 'همگام‌سازی'];
+  function isRecheckGroup(name) {
+    if (!name) return false;
+    return RECHECK_GROUP_KEYWORDS.some(k => name.includes(k));
+  }
 
   // ════════════════════════════════════════════════════════════
   // 🛠️ توابع کمکی
@@ -96,6 +105,12 @@
   function navigateToContact(uid) {
     const url = `https://web.bale.ai/chat?uid=${uid}`;
     history.pushState({}, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+
+  // 🆕 Navigate to the flow page without a full page reload
+  function navigateToFlow() {
+    history.pushState({}, '', FLOW_URL);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
@@ -353,17 +368,17 @@
 
   log(`Starting check of ${targetUIDs.length} UIDs...`);
   log(`Poll interval: ${POLL_INTERVAL} ms`);
-  log(`Pause after N users: ${PAUSE_AFTER_N_USERS_RANGE}`);
-  log(`Pause duration: ${PAUSE_DURATION_RANGE} ms`);
+  log(`Flow visit after N users: ${FLOW_VISIT_AFTER_N_USERS_RANGE}`);
+  log(`Flow visit pause: ${FLOW_VISIT_PAUSE_RANGE} ms`);
   log('To stop: stopChecking()');
 
   let stopRequested = false;
   window.stopChecking = () => { stopRequested = true; };
 
-  // تعیین تعداد کاربران تا مکث بعدی (تصادفی)
-  let usersSinceLastPause = 0;
-  let nextPauseAfter = getRandomDelay(PAUSE_AFTER_N_USERS_RANGE);
-  log(`First pause will occur after ${nextPauseAfter} users.`);
+  // 🆕 تعیین تعداد کاربران تا رفتن به flow بعدی (تصادفی)
+  let usersSinceLastFlowVisit = 0;
+  let nextFlowVisitAfter = getRandomDelay(FLOW_VISIT_AFTER_N_USERS_RANGE);
+  log(`First flow visit will occur after ${nextFlowVisitAfter} users.`);
 
   for (let i = 0; i < targetUIDs.length; i++) {
     if (stopRequested) {
@@ -432,17 +447,19 @@
       } else {
         log(`Skipped group assignment for ${uid} (status was not found).`);
       }
-      usersSinceLastPause++;
+      usersSinceLastFlowVisit++;
 
-      // ── مکث بعد از تعداد مشخصی کاربر ─────────────────────
-      if (usersSinceLastPause >= nextPauseAfter) {
-        const pauseDuration = getRandomDelay(PAUSE_DURATION_RANGE);
-        log(`Pausing for ${pauseDuration} ms after ${usersSinceLastPause} users...`);
-        await sleep(pauseDuration);
-        log('Pause finished.');
-        usersSinceLastPause = 0;
-        nextPauseAfter = getRandomDelay(PAUSE_AFTER_N_USERS_RANGE);
-        log(`Next pause will occur after ${nextPauseAfter} users.`);
+      // 🆕 ── رفتن به صفحه flow بعد از تعداد مشخصی کاربر ─────
+      if (usersSinceLastFlowVisit >= nextFlowVisitAfter) {
+        log(`Going to flow page after ${usersSinceLastFlowVisit} users...`);
+        navigateToFlow();
+        const flowPause = getRandomDelay(FLOW_VISIT_PAUSE_RANGE);
+        log(`Pausing on flow page for ${flowPause} ms...`);
+        await sleep(flowPause);
+        log('Flow visit finished. Continuing...');
+        usersSinceLastFlowVisit = 0;
+        nextFlowVisitAfter = getRandomDelay(FLOW_VISIT_AFTER_N_USERS_RANGE);
+        log(`Next flow visit will occur after ${nextFlowVisitAfter} users.`);
       }
 
       const betweenDelay = getRandomDelay(DELAY_BETWEEN_USERS_RANGE);
@@ -453,6 +470,72 @@
       warn(`Unexpected error for ${uid}: ${err.message}`);
       addToGroup(UNKNOWN_KEY, uid);
       markFailed(uid, `Unexpected error: ${err.message}`);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 🔁 بررسی مجدد UIDهای «درحال اتصال...» و «همگام‌سازی...»
+  // ════════════════════════════════════════════════════════════
+  const recheckUIDs = [];
+  for (const key of Object.keys(groups)) {
+    if (isRecheckGroup(key)) {
+      for (const uid of groups[key]) {
+        if (!recheckUIDs.includes(uid)) recheckUIDs.push(uid);
+      }
+    }
+  }
+
+  if (recheckUIDs.length === 0) {
+    log('\nNo UIDs in "درحال اتصال..." / "همگام‌سازی..." groups to recheck.');
+  } else {
+    log('\n=======================================');
+    log(`Rechecking ${recheckUIDs.length} UIDs from "درحال اتصال..." / "همگام‌سازی..."`);
+    log('=======================================');
+
+    for (let j = 0; j < recheckUIDs.length; j++) {
+      if (stopRequested) {
+        log('Recheck stopped by user.');
+        break;
+      }
+
+      const uid = recheckUIDs[j];
+      log(`\n──── recheck ${j + 1}/${recheckUIDs.length} | UID: ${uid} ────`);
+
+      try {
+        navigateToContact(uid);
+        await sleep(getRandomDelay(DELAY_AFTER_NAVIGATION_RANGE));
+
+        try {
+          await waitForElement(CONTACT_NAME_SELECTOR, TIMEOUT_CONTACT_NAME);
+        } catch (e) {
+          warn(`Contact name not found (${uid}) — ${e.message}`);
+        }
+
+        await sleep(getRandomDelay(DELAY_BEFORE_READING_STATUS_RANGE));
+
+        let newStatus = null;
+        try {
+          const { el } = await waitForElement(STATUS_SELECTOR, TIMEOUT_STATUS);
+          newStatus = (el.textContent || '').trim().replace(/\s+/g, ' ');
+          if (!newStatus) newStatus = UNKNOWN_KEY;
+        } catch (e) {
+          warn(`Recheck: status not found (${uid}) — ${e.message}`);
+        }
+
+        if (newStatus && !isRecheckGroup(newStatus)) {
+          // addToGroup خودش UID را از گروه قبلی حذف می‌کند
+          addToGroup(newStatus, uid);
+          log(`UID ${uid} moved to group "${newStatus}".`);
+        } else if (newStatus) {
+          log(`UID ${uid} still in "${newStatus}" — kept as is.`);
+        } else {
+          log(`UID ${uid} skipped (status not read).`);
+        }
+
+        await sleep(getRandomDelay(DELAY_BETWEEN_USERS_RANGE));
+      } catch (err) {
+        warn(`Recheck error for ${uid}: ${err.message}`);
+      }
     }
   }
 
