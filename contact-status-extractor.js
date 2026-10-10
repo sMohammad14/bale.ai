@@ -42,6 +42,13 @@
   const STATUS_SELECTOR = '#app_main_wrapper > div.main-section-container._ftgZa > div.kvGVCY > div.EFGTGm > div.QHs5iA > p > span'; // متن وضعیت زیر اسم
   const MESSAGE_BOX_SELECTOR = '#editable-message-text'; // باکس پیام
 
+  // 🆕 سلکتور وضعیت برای اکانت‌های پاک‌شده (ساختار DOM متفاوت است)
+  const DELETED_STATUS_ALT_SELECTOR = '#app_main_wrapper > div.main-section-container._ftgZa > div.kvGVCY > div.EFGTGm > div.QHs5iA > div > p';
+
+  // 🆕 مقادیر تشخیص اکانت پاک‌شده
+  const DELETED_ACCOUNT_NAME = 'حساب پاک‌شده';
+  const DELETED_ACCOUNT_STATUS = 'مدت‌ها پیش اینجا بوده';
+
   // ════════════════════════════════════════════════════════════
   // 🧠 ذخیره‌سازی گروه‌ها
   // ════════════════════════════════════════════════════════════
@@ -112,6 +119,22 @@
   function navigateToFlow() {
     history.pushState({}, '', FLOW_URL);
     window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+
+  // 🆕 تشخیص اکانت پاک‌شده بر اساس نام و وضعیت
+  function isDeletedAccount() {
+    const nameEl = document.querySelector(CONTACT_NAME_SELECTOR);
+    const nameText = nameEl ? (nameEl.textContent || '').trim().replace(/\s+/g, ' ') : '';
+    if (nameText !== DELETED_ACCOUNT_NAME) return false;
+
+    let statusText = '';
+    const stEl = document.querySelector(STATUS_SELECTOR);
+    if (stEl) statusText = (stEl.textContent || '').trim().replace(/\s+/g, ' ');
+    if (!statusText) {
+      const altEl = document.querySelector(DELETED_STATUS_ALT_SELECTOR);
+      if (altEl) statusText = (altEl.textContent || '').trim().replace(/\s+/g, ' ');
+    }
+    return statusText === DELETED_ACCOUNT_STATUS;
   }
 
   // ════════════════════════════════════════════════════════════
@@ -414,6 +437,44 @@
       log(`Delay before reading status: ${beforeStatusDelay} ms`);
       await sleep(beforeStatusDelay);
 
+      // 🆕 ── بررسی اکانت پاک‌شده ────────────────────────────
+      if (isDeletedAccount()) {
+        log(`Deleted account detected (${uid}) — skipping without recording.`);
+        // پاک کردن UID از همه گروه‌ها (اگر قبلاً جایی بوده)
+        for (const k of Object.keys(groups)) {
+          if (groups[k].includes(uid)) {
+            groups[k] = groups[k].filter(x => x !== uid);
+            if (groups[k].length === 0) delete groups[k];
+          }
+        }
+        persistGroups();
+        // حذف از لیست failed (اگر قبلاً ثبت شده بود)
+        if (failedUIDs[uid]) {
+          delete failedUIDs[uid];
+          persistFailed();
+        }
+
+        usersSinceLastFlowVisit++;
+
+        // رفتن به flow در صورت لزوم
+        if (usersSinceLastFlowVisit >= nextFlowVisitAfter) {
+          log(`Going to flow page after ${usersSinceLastFlowVisit} users...`);
+          navigateToFlow();
+          const flowPause = getRandomDelay(FLOW_VISIT_PAUSE_RANGE);
+          log(`Pausing on flow page for ${flowPause} ms...`);
+          await sleep(flowPause);
+          log('Flow visit finished. Continuing...');
+          usersSinceLastFlowVisit = 0;
+          nextFlowVisitAfter = getRandomDelay(FLOW_VISIT_AFTER_N_USERS_RANGE);
+          log(`Next flow visit will occur after ${nextFlowVisitAfter} users.`);
+        }
+
+        const betweenDelaySkip = getRandomDelay(DELAY_BETWEEN_USERS_RANGE);
+        log(`Delay until next user: ${betweenDelaySkip} ms`);
+        await sleep(betweenDelaySkip);
+        continue;
+      }
+
       // ── مرحله ۳: انتظار برای متن وضعیت ────────────────────
       log('Waiting for status text...');
       let statusText = UNKNOWN_KEY;
@@ -512,6 +573,24 @@
         }
 
         await sleep(getRandomDelay(DELAY_BEFORE_READING_STATUS_RANGE));
+
+        // 🆕 بررسی اکانت پاک‌شده در فاز recheck
+        if (isDeletedAccount()) {
+          log(`Deleted account detected during recheck (${uid}) — removing from all groups.`);
+          for (const k of Object.keys(groups)) {
+            if (groups[k].includes(uid)) {
+              groups[k] = groups[k].filter(x => x !== uid);
+              if (groups[k].length === 0) delete groups[k];
+            }
+          }
+          persistGroups();
+          if (failedUIDs[uid]) {
+            delete failedUIDs[uid];
+            persistFailed();
+          }
+          await sleep(getRandomDelay(DELAY_BETWEEN_USERS_RANGE));
+          continue;
+        }
 
         let newStatus = null;
         try {
