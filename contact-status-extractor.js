@@ -25,14 +25,14 @@
   const TIMEOUT_STATUS = 60000;       // حداکثر انتظار برای ظاهر شدن متن وضعیت
   const TIMEOUT_MESSAGE_BOX = 60000;  // حداکثر انتظار برای ظاهر شدن باکس پیام
 
-  const DELAY_AFTER_NAVIGATION_RANGE = "20-500";        // تأخیر تصادفی بعد از رفتن به چت
-  const DELAY_BEFORE_READING_STATUS_RANGE = "1000-1500";    // تأخیر تصادفی قبل از خواندن وضعیت
-  const DELAY_BETWEEN_USERS_RANGE = "20-500";           // تأخیر تصادفی بین هر کاربر و کاربر بعدی
+  const DELAY_AFTER_NAVIGATION_RANGE = "20-200";        // تأخیر تصادفی بعد از رفتن به چت
+  const DELAY_BEFORE_READING_STATUS_RANGE = "20-200";    // تأخیر تصادفی قبل از خواندن وضعیت
+  const DELAY_BETWEEN_USERS_RANGE = "20-200";           // تأخیر تصادفی بین هر کاربر و کاربر بعدی
 
   // 🆕 رفتن به صفحه flow بعد از تعداد تصادفی کاربر
   const FLOW_URL = 'https://web.bale.ai/flow';
-  const FLOW_VISIT_AFTER_N_USERS_RANGE = "5-15";   // بعد از چند کاربر (تصادفی) برو به flow
-  const FLOW_VISIT_PAUSE_RANGE = "3000-10000";     // مدت مکث تصادفی در صفحه flow (میلی‌ثانیه)
+  const FLOW_VISIT_AFTER_N_USERS_RANGE = "100-200";   // بعد از چند کاربر (تصادفی) برو به flow
+  const FLOW_VISIT_PAUSE_RANGE = "5000-10000";     // مدت مکث تصادفی در صفحه flow (میلی‌ثانیه)
 
   // ════════════════════════════════════════════════════════════
   // 🎯 سلکتورهای DOM
@@ -45,9 +45,15 @@
   // 🆕 سلکتور وضعیت برای اکانت‌های پاک‌شده (ساختار DOM متفاوت است)
   const DELETED_STATUS_ALT_SELECTOR = '#app_main_wrapper > div.main-section-container._ftgZa > div.kvGVCY > div.EFGTGm > div.QHs5iA > div > p';
 
-  // 🆕 مقادیر تشخیص اکانت پاک‌شده
-  const DELETED_ACCOUNT_NAME = 'حساب پاک‌شده';
-  const DELETED_ACCOUNT_STATUS = 'مدت‌ها پیش اینجا بوده';
+  // 🆕 مقادیر تشخیص اکانت پاک‌شده (نسخه نرمال‌شده — فقط حروف فارسی، بدون فاصله و نیم‌فاصله)
+  const DELETED_ACCOUNT_NAME_NORM = 'حسابپاکشده';
+  const DELETED_ACCOUNT_STATUS_NORM = 'مدتهاپیشاینجابوده';
+
+  // 🆕 نرمال‌سازی: فقط حروف فارسی (\u0600-\u06FF) نگه داشته می‌شود،
+  // همه‌چیز دیگر (فاصله، نیم‌فاصله ZWNJ، علائم، اعداد لاتین و ...) حذف می‌شود
+  function normalizePersian(s) {
+    return (s || '').replace(/[^\u0600-\u06FF]/g, '');
+  }
 
   // ════════════════════════════════════════════════════════════
   // 🧠 ذخیره‌سازی گروه‌ها
@@ -121,20 +127,20 @@
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
-  // 🆕 تشخیص اکانت پاک‌شده بر اساس نام و وضعیت
+  // 🆕 تشخیص اکانت پاک‌شده بر اساس نام و وضعیت (با نرمال‌سازی فارسی)
   function isDeletedAccount() {
     const nameEl = document.querySelector(CONTACT_NAME_SELECTOR);
-    const nameText = nameEl ? (nameEl.textContent || '').trim().replace(/\s+/g, ' ') : '';
-    if (nameText !== DELETED_ACCOUNT_NAME) return false;
+    const nameText = nameEl ? (nameEl.textContent || '') : '';
+    if (normalizePersian(nameText) !== DELETED_ACCOUNT_NAME_NORM) return false;
 
     let statusText = '';
     const stEl = document.querySelector(STATUS_SELECTOR);
-    if (stEl) statusText = (stEl.textContent || '').trim().replace(/\s+/g, ' ');
-    if (!statusText) {
+    if (stEl) statusText = (stEl.textContent || '');
+    if (!statusText.trim()) {
       const altEl = document.querySelector(DELETED_STATUS_ALT_SELECTOR);
-      if (altEl) statusText = (altEl.textContent || '').trim().replace(/\s+/g, ' ');
+      if (altEl) statusText = (altEl.textContent || '');
     }
-    return statusText === DELETED_ACCOUNT_STATUS;
+    return normalizePersian(statusText) === DELETED_ACCOUNT_STATUS_NORM;
   }
 
   // ════════════════════════════════════════════════════════════
