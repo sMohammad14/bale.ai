@@ -1,6 +1,6 @@
 (async function autoExtract() {
   // یکم وایسه برای لود اولیه
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 1000));
 
   // تلاش برای یافتن کانتینر اسکرول (N9_tF_)
   const container = document.querySelector('.N9_tF_');
@@ -51,15 +51,15 @@
   });
   observer.observe(tbody, { childList: true, subtree: true });
 
-  console.log('هر 0.2 ثانیه');
+  console.log('هر 1 ثانیه');
 
   // اسکرول تا انتها
   while (stableCount < 5) {
     const prevScroll = container.scrollTop;
     const prevRows = tbody.querySelectorAll('tr.GUqHyZ').length;
 
-    container.scrollTop += container.clientHeight * 0.3;
-    await new Promise(r => setTimeout(r, 200));
+    container.scrollTop += container.clientHeight * 3000;
+    await new Promise(r => setTimeout(r, 1000));
 
     const currScroll = container.scrollTop;
     const currRows = tbody.querySelectorAll('tr.GUqHyZ').length;
