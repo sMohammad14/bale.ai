@@ -100,7 +100,7 @@
   const TOTAL_MEMBERS_COUNT = 0;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجه not-added
-  const MAX_NOT_ADDED_RETRIES = 10;
+  const MAX_NOT_ADDED_RETRIES = 50;
 
   // حداکثر تعداد تلاش برای بارگذاری یک ردیف نامرئی
   const MAX_ROW_LOAD_ATTEMPTS = 15;
@@ -593,7 +593,7 @@
 
     const uid = getUIDFromRow(row);
     const nameText = (row.querySelector('div.ivqFHl')?.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-    console.log(`\n🔄 Processing index ${index} | UID: ${uid || 'unknown'} | Name: ${nameText}`);
+    console.log(`\n🔄 Processing ${index + 1}/${totalMembers} | UID: ${uid || 'unknown'} | Name: ${nameText}`);
 
     if (!uid) {
       console.warn(`⚠️ UID not found for index ${index}, skipping user.`);
