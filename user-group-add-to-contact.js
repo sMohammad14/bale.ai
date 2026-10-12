@@ -105,6 +105,11 @@
   // حداکثر تعداد تلاش برای بارگذاری یک ردیف نامرئی
   const MAX_ROW_LOAD_ATTEMPTS = 15;
 
+  // جهت پردازش لیست اعضا:
+  // 0 = از ابتدای لیست به سمت انتها (index صعودی)
+  // 1 = از انتهای لیست به سمت ابتدا (index نزولی)
+  const START_FROM_END = 0;
+
   // لیست UID های مسدود که به مخاطبین اضافه نمی‌شوند (Set)
   const BLOCKED_UIDS = new Set(["3634991","1636335","554741"]);
 
@@ -776,20 +781,28 @@
 
   console.log('🚀 Starting automatic contact addition (sequential)...');
   console.log('To stop manually, type stopAutomation() in console.');
+  console.log(`🧭 Direction: ${START_FROM_END === 1 ? 'END → START (descending index)' : 'START → END (ascending index)'}`);
 
   let stopRequested = false;
   window.stopAutomation = () => { stopRequested = true; };
 
-  let targetIndex = 0;
+  // ✅ تعیین ایندکس شروع بر اساس فلگ جهت
+  let targetIndex = (START_FROM_END === 1) ? (totalMembers - 1) : 0;
   let nextPauseAt = getDelay(PAUSE_INTERVAL_ADDED);
 
-  while (!stopRequested && targetIndex < totalMembers) {
+  // ✅ شرط حلقه بر اساس جهت
+  const isInRange = (idx) => (START_FROM_END === 1) ? (idx >= 0) : (idx < totalMembers);
+
+  // ✅ گام بعدی بر اساس جهت
+  const stepIndex = (idx) => (START_FROM_END === 1) ? (idx - 1) : (idx + 1);
+
+  while (!stopRequested && isInRange(targetIndex)) {
     let row = await tryLoadRow(targetIndex);
 
     if (!row) {
       skippedRowList.push({ index: targetIndex });
       console.warn(`⏭️ Skipping index ${targetIndex} due to row load failure.`);
-      targetIndex++;
+      targetIndex = stepIndex(targetIndex);
       continue;
     }
 
@@ -808,7 +821,7 @@
         failedUsersList.push({ index: targetIndex, uid: uid || null, name });
         console.warn(`❌ Skipped index ${targetIndex} after ${currentAttempt} attempts (not-added).`);
         attemptsMap.delete(targetIndex);
-        targetIndex++;
+        targetIndex = stepIndex(targetIndex);
       } else {
         console.log(`   🔁 Retrying same index ${targetIndex} (attempt ${currentAttempt}/${MAX_NOT_ADDED_RETRIES})...`);
         await sleep(getDelay(SCROLL_STEP_DELAY_RANGE));
@@ -816,7 +829,7 @@
       }
     } else {
       attemptsMap.delete(targetIndex);
-      targetIndex++;
+      targetIndex = stepIndex(targetIndex);
     }
 
     if (result === 'added' && addedCount >= nextPauseAt) {
@@ -827,7 +840,7 @@
       nextPauseAt = addedCount + getDelay(PAUSE_INTERVAL_ADDED);
     }
 
-    if (targetIndex >= totalMembers) {
+    if (!isInRange(targetIndex)) {
       console.log('📌 Reached end of list.');
       break;
     }
