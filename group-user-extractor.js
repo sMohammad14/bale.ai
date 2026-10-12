@@ -16,8 +16,32 @@
     return;
   }
 
+  // ═══════════════════════════════════════════
+  // ⚙️ ثابت‌های اسکرول (منطق کد دوم)
+  // ═══════════════════════════════════════════
+  const PRELOAD_SCROLL_STEP_RATIO = 0.8;          // نسبت اسکرول در هر گام
+  const PRELOAD_STABLE_END_COUNT = 10;            // تعداد اسکرول بدون افزایش → توقف
+  const PRELOAD_MAX_SCROLL_ATTEMPTS = 10000;      // سقف اسکرول‌ها
+  const PRELOAD_SCROLL_DELAY_RANGE = "200-1500";  // تأخیر تصادفی بین اسکرول‌ها
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function getDelay(range) {
+    if (typeof range === 'string' && range.includes('-')) {
+      const parts = range.split('-');
+      if (parts.length === 2) {
+        const min = parseInt(parts[0].trim(), 10);
+        const max = parseInt(parts[1].trim(), 10);
+        if (!isNaN(min) && !isNaN(max)) {
+          if (min === max) return min;
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+      }
+    }
+    return range;
+  }
+
   const uidSet = new Set();
-  let stableCount = 0;
 
   // استخراج UID از یک ردیف با استفاده از React Fiber
   function getUID(row) {
@@ -38,6 +62,26 @@
     return null;
   }
 
+  // گرفتن بیشترین data-index موجود در tbody
+  function getMaxDataIndex(tb) {
+    const rows = tb.querySelectorAll('tr.GUqHyZ');
+    let max = -1;
+    rows.forEach(r => {
+      const idx = parseInt(r.getAttribute('data-index'), 10);
+      if (!isNaN(idx) && idx > max) max = idx;
+    });
+    return max;
+  }
+
+  // جمع‌آوری UID از ردیف‌های فعلی
+  const collectUIDs = () => {
+    const rows = tbody.querySelectorAll('tr.GUqHyZ');
+    rows.forEach(r => {
+      const uid = getUID(r);
+      if (uid) uidSet.add(uid);
+    });
+  };
+
   // Observer برای ردیف‌های جدید
   const observer = new MutationObserver(mutations => {
     for (const m of mutations) {
@@ -51,27 +95,57 @@
   });
   observer.observe(tbody, { childList: true, subtree: true });
 
-  console.log('هر 1 ثانیه');
+  console.log('🔄 شروع اسکرول از ابتدا تا انتها...');
 
-  // اسکرول تا انتها
-  while (stableCount < 5) {
-    const prevScroll = container.scrollTop;
-    const prevRows = tbody.querySelectorAll('tr.GUqHyZ').length;
+  // برگرد به بالا و جمع‌آوری اولیه
+  container.scrollTop = 0;
+  await sleep(getDelay(PRELOAD_SCROLL_DELAY_RANGE));
+  collectUIDs();
 
-    container.scrollTop += container.clientHeight * 3000;
-    await new Promise(r => setTimeout(r, 1000));
+  let prevMaxIndex = -1;
+  let noIncreaseCount = 0;
+  let scrollAttempts = 0;
 
-    const currScroll = container.scrollTop;
-    const currRows = tbody.querySelectorAll('tr.GUqHyZ').length;
-
-    if (Math.abs(currScroll - prevScroll) < 1 && currRows === prevRows) {
-      stableCount++;
+  // ═══════════════════════════════════════════
+  // 🔁 حلقهٔ اسکرول با منطق کد دوم
+  // ═══════════════════════════════════════════
+  while (true) {
+    const currentMax = getMaxDataIndex(tbody);
+    if (currentMax > prevMaxIndex) {
+      prevMaxIndex = currentMax;
+      noIncreaseCount = 0;
     } else {
-      stableCount = 0;
+      noIncreaseCount++;
     }
+
+    // ✅ تشخیص رسیدن به انتهای لیست
+    const atBottom = (container.scrollTop + container.clientHeight) >= (container.scrollHeight - 5);
+    if (atBottom && scrollAttempts > 0) {
+      console.log(`📌 Reached bottom of list. Last row index detected: ${prevMaxIndex}`);
+      break;
+    }
+
+    if (noIncreaseCount >= PRELOAD_STABLE_END_COUNT) {
+      console.log(`📌 Preload stopped after ${noIncreaseCount} stable scrolls.`);
+      break;
+    }
+
+    if (scrollAttempts >= PRELOAD_MAX_SCROLL_ATTEMPTS) {
+      console.warn('⚠️ Max scroll attempts reached.');
+      break;
+    }
+
+    const step = container.clientHeight * PRELOAD_SCROLL_STEP_RATIO;
+    container.scrollTop += step;
+    scrollAttempts++;
+
+    await sleep(getDelay(PRELOAD_SCROLL_DELAY_RANGE));
+    collectUIDs();
   }
 
+  collectUIDs();
   observer.disconnect();
+
   console.log(`پایان اسکرول. تعداد UID های یکتا: ${uidSet.size}`);
   console.log(JSON.stringify(Array.from(uidSet)));
   console.log('آرایه کپی بشه.');
