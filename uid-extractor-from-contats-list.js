@@ -16,12 +16,14 @@
 
   const ids = all.map(record => String(record.id));
 
+  const uniqueIds = [...new Set(ids)];
+
+  console.log(`تعداد اعضا یکتا: ${uniqueIds.length}`);
+
   const output = JSON.stringify(ids);
   console.log(output);
 
   copy(ids);
-
-  console.log(`Total contacts: ${ids.length}`);
 
   db.close();
 })();
