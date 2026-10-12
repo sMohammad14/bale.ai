@@ -96,8 +96,8 @@
   // حداکثر تعداد اسکرول‌های پیش‌بارگذاری (جلوگیری از حلقه بی‌نهایت)
   const PRELOAD_MAX_SCROLL_ATTEMPTS = 10000;
 
-  // تعداد کل اعضای گروه (اگر 0 باشد، کد خودش تشخیص میده، بهتر هست 3 عدد از تعداد اعضای گروه کم ترباشه)
-  const TOTAL_MEMBERS_COUNT = 2791;
+  // اگر 0 باشد، کد خودش آخرین ردیف را تشخیص می‌دهد (نیازی به دادن تعداد اعضا نیست)
+  const TOTAL_MEMBERS_COUNT = 0;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجه not-added
   const MAX_NOT_ADDED_RETRIES = 10;
@@ -106,7 +106,11 @@
   const MAX_ROW_LOAD_ATTEMPTS = 15;
 
   // لیست UID های مسدود که به مخاطبین اضافه نمی‌شوند (Set)
-  const BLOCKED_UIDS = new Set(["6863","5555"]);
+  const BLOCKED_UIDS = new Set([
+    "2144192541",
+    "2139733552",
+    "2139137031",
+    "2137107175"]);
 
   let totalChecked = 0;
   let alreadyContacts = 0;
@@ -445,6 +449,14 @@
         noIncreaseCount++;
       }
 
+      // ✅ تشخیص رسیدن به انتهای لیست (آخرین ردیف)
+      // اگر اسکرول به پایین‌ترین نقطه رسیده باشد، یعنی آخرین ردیف شناسایی شده است
+      const atBottom = (container.scrollTop + container.clientHeight) >= (container.scrollHeight - 5);
+      if (atBottom && scrollAttempts > 0) {
+        console.log(`📌 Reached bottom of list. Last row index detected: ${prevMaxIndex}`);
+        break;
+      }
+
       if (targetMaxIndex >= 0 && prevMaxIndex >= targetMaxIndex) {
         console.log(`📌 Reached target max index ${targetMaxIndex}.`);
         break;
@@ -470,7 +482,8 @@
     }
 
     maxKnownIndex = prevMaxIndex;
-    console.log(`✅ Preload finished. Max index seen: ${maxKnownIndex}. Scrolling back to top...`);
+    console.log(`✅ Preload finished. Last row index: ${maxKnownIndex} | Total members detected: ${maxKnownIndex + 1}`);
+    console.log(`↩️ Scrolling back to top...`);
     container.scrollTop = 0;
     await sleep(getDelay(SCROLL_STEP_DELAY_RANGE));
 
@@ -561,7 +574,7 @@
   console.log('═══════════════════════════════════════════\n');
 
   let totalMembers = TOTAL_MEMBERS_COUNT > 0 ? TOTAL_MEMBERS_COUNT : maxKnownIndex + 1;
-  console.log(`ℹ️ Total members to process: ${totalMembers} (max index: ${totalMembers - 1})`);
+  console.log(`ℹ️ Total members to process: ${totalMembers} (last index detected: ${totalMembers - 1})`);
 
   function findClickableAncestor(element) {
     let el = element;
@@ -847,4 +860,4 @@
     console.warn = _origWarn;
     console.error = _origError;
   }
-})(); 
+})();
