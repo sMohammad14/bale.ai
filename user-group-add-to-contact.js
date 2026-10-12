@@ -70,7 +70,7 @@
   const TIMEOUT_LIST_RETURN = 5000;
 
   // ⏱️ تاخیر تصادفی بعد از هر اسکرول پیش‌بارگذاری
-  const PRELOAD_SCROLL_DELAY_RANGE = "200-1500";
+  const PRELOAD_SCROLL_DELAY_RANGE = "500-1500";
 
   // ⏱️ تعداد تصادفی مخاطب برای توقف (بازه تصادفی)
   const PAUSE_INTERVAL_ADDED = "200-400";
@@ -94,23 +94,19 @@
   const PRELOAD_STABLE_END_COUNT = 10;
 
   // حداکثر تعداد اسکرول‌های پیش‌بارگذاری (جلوگیری از حلقه بی‌نهایت)
-  const PRELOAD_MAX_SCROLL_ATTEMPTS = 10000;
+  const PRELOAD_MAX_SCROLL_ATTEMPTS = 20000;
 
   // اگر 0 باشد، کد خودش آخرین ردیف را تشخیص می‌دهد (نیازی به دادن تعداد اعضا نیست)
   const TOTAL_MEMBERS_COUNT = 0;
 
   // حداکثر تعداد تلاش برای هر کاربر در صورت نتیجه not-added
-  const MAX_NOT_ADDED_RETRIES = 50;
+  const MAX_NOT_ADDED_RETRIES = 100;
 
   // حداکثر تعداد تلاش برای بارگذاری یک ردیف نامرئی
   const MAX_ROW_LOAD_ATTEMPTS = 15;
 
   // لیست UID های مسدود که به مخاطبین اضافه نمی‌شوند (Set)
-  const BLOCKED_UIDS = new Set([
-    "2144192541",
-    "2139733552",
-    "2139137031",
-    "2137107175"]);
+  const BLOCKED_UIDS = new Set(["3634991","1636335","554741"]);
 
   let totalChecked = 0;
   let alreadyContacts = 0;
